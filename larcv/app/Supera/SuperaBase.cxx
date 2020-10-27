@@ -37,7 +37,7 @@ namespace larcv {
   const TG4Event* SuperaBase::GetEvent()
   {
     if (!_event)
-    throw larbys("art::Event not set!");
+      throw larbys("EdepSim TG4Event not set!");
     return _event;
   }
 
