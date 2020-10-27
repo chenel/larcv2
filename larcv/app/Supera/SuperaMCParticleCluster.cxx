@@ -126,11 +126,15 @@ namespace larcv
       meta3d = ev_tensor3d.meta();
     }
 
-    // Build MCParticle List
+    // Build MCParticle List.
+    // Note that we made Particles in SuperaG4HitSegment.  We'll use those here.
     TG4Event const *ev = GetEvent();
-    _mc_part_list.Update(ev->Trajectories, ev->RunId, ev->EventId);
+    const auto ev_particles = dynamic_cast<EventParticle *>(mgr.get_data("particle", _particle_producer));
+    const std::vector<larcv::Particle> & particles = ev_particles->as_vector();
+    _mc_part_list.Update(particles, ev->RunId, ev->EventId);
 
     auto const& trackid2index = _mc_part_list.TrackIdToIndex();
+
     // Create ParticleGroup
     LARCV_INFO() << "Creating ParticleGroups" << std::endl;
     auto part_grp_v = this->CreateParticleGroups();

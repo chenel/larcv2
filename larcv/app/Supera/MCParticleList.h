@@ -17,6 +17,11 @@
 #include <iostream>
 #include "EDepSim/TG4Trajectory.h"
 
+namespace larcv
+{
+  class Particle;
+}
+
 namespace supera {
 
   /**
@@ -34,7 +39,7 @@ namespace supera {
     /// Default destructor
     ~MCParticleList(){}
 
-    void Update(const std::vector<TG4Trajectory>& tg4trajs, int run, int event);
+    void Update(const std::vector<larcv::Particle> & particles, int run, int event);
 
     const std::vector<int>& PdgCode()        const { return _pdgcode_v;        }
     const std::vector<int>& ParentIndex()    const { return _parent_index_v;   }
