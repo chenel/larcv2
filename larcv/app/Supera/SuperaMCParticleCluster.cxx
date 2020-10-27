@@ -1,6 +1,11 @@
 #include "SuperaMCParticleCluster.h"
 
+#include <numeric>
+
+#include "larcv/core/DataFormat/EventParticle.h"
 #include "larcv/core/DataFormat/EventVoxel3D.h"
+#include "larcv/core/DataFormat/Particle.h"
+#include "Voxelize.h"
 
 namespace larcv
 {
@@ -116,7 +121,6 @@ namespace larcv
     larcv::Voxel3DMeta meta3d;
 
     // load the voxel metadata
-
     if(!_ref_meta3d_cluster3d.empty()) {
       auto const& ev_cluster3d = mgr.get_data<larcv::EventClusterVoxel3D>(_ref_meta3d_cluster3d);
       meta3d = ev_cluster3d.meta();
@@ -137,29 +141,11 @@ namespace larcv
 
     // Create ParticleGroup
     LARCV_INFO() << "Creating ParticleGroups" << std::endl;
-    auto part_grp_v = this->CreateParticleGroups();
+    std::vector<supera::ParticleGroup> part_grp_v = this->CreateParticleGroups(particles);
 
     // Fill Voxel Information
-    LARCV_INFO() << "Analyzing SimChannel/SimEnergyDeposit" << std::endl;
-    if(_use_sed)
-      this->AnalyzeSimEnergyDeposit(meta3d, part_grp_v, mgr);
-    else
-      this->AnalyzeSimChannel(meta3d, part_grp_v, mgr);
-
-    // Define particle first/last points based on SED
-    LARCV_INFO() << "Analyzing First Step" << std::endl;
-    if(_use_sed_points && !_use_sed)
-      this->AnalyzeFirstLastStep(meta3d, part_grp_v);
-
-    /*
-    std::cout<< "Listing non-zero voxel particles..." << std::endl;
-    for(auto const& grp : part_grp_v) {
-      if(grp.vs.size() < 1) continue;
-      std::cout<<"Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
-	       << " " << grp.part.creation_process() << " " << grp.vs.size() << " voxels"
-	       <<" ... parent Track ID " << grp.part.parent_track_id() << " PDG " << grp.part.parent_pdg_code() << std::endl;
-    }
-    */
+    LARCV_INFO() << "Analyzing energy deposits" << std::endl;
+    this->AnalyzeSimEnergyDeposit(meta3d, part_grp_v, mgr);
 
     // Merge fragments of showers
     LARCV_INFO() << "Merging: shower ionization" << std::endl;
@@ -1185,5 +1171,359 @@ namespace larcv
   // =============================================================================================
   //  private methods
   // =============================================================================================
+
+  // ------------------------------------------------------
+  void SuperaMCParticleCluster::AnalyzeSimEnergyDeposit(const larcv::Voxel3DMeta& meta,
+                                                        std::vector<supera::ParticleGroup>& part_grp_v,
+                                                        larcv::IOManager& mgr)
+  {
+    const auto & ev = this->GetEvent();
+    ;
+
+    auto const &trackid2index = _mc_part_list.TrackIdToIndex();
+
+    LARCV_INFO() << "Processing TG4HitSegments: " << std::endl;
+    std::size_t sedep_counter = 0;
+    std::size_t bad_sedep_counter = 0;
+    std::set<size_t> missing_trackid;
+    std::vector<larcv::Particle> noparticles;  // used in call to MakeVoxelsBelow.  Don't need to update their energy deposits...
+    for (const auto & sensitiveDetPair : ev->SegmentDetectors)
+    {
+      for (const auto & sedep : sensitiveDetPair.second)
+      {
+        std::stringstream trks;
+        std::for_each(std::begin(sedep.Contrib), std::end(sedep.Contrib),
+                      [&trks](const int trk) { trks << " " << trk; });
+        LARCV_DEBUG() << "Recording edep from tracks " << trks.str()
+                      << ", total Edep=" << sedep.EnergyDeposit
+                      << ", start pos=(" << sedep.Start.Vect().X() << "," << sedep.Start.Vect().Y() << "," << sedep.Start.Vect().Z() << ")"
+                      << std::endl;
+        sedep_counter++;
+
+
+        int track_id = abs(sedep.GetPrimaryId());
+        if (track_id >= ((int) (trackid2index.size())))
+        {
+          bad_sedep_counter++;
+          missing_trackid.insert(track_id);
+          continue;
+        }
+
+        for (const auto &vox : MakeVoxels(sedep, meta, noparticles))
+        {
+          if (vox.id() == larcv::kINVALID_VOXELID)
+          {
+            LARCV_DEBUG() << "Skipping edep in invalid voxel: " << vox.id()
+                          << ", Edep =" << vox.value()
+                          << std::endl;
+            continue;
+          }
+          //ctr_a.insert(vox_id);
+
+          supera::EDep pt;
+          pt.x = meta.pos_x(vox.id());
+          pt.y = meta.pos_y(vox.id());
+          pt.z = meta.pos_z(vox.id());
+          pt.t = sedep.Start.T();
+          pt.e = vox.value();
+
+
+          auto &grp = part_grp_v[track_id];
+          if (!grp.valid) continue;
+
+          grp.vs.emplace(vox.id(), vox.value(), true);
+          grp.AddEDep(pt);
+         } // for (vox)
+      } // for (sedep)
+    } // for (sensitiveDetPair)
+    if (bad_sedep_counter)
+    {
+      LARCV_WARNING() << bad_sedep_counter << " / " << sedep_counter << " Edep-sim TG4HitSegments "
+                      << "(from " << missing_trackid.size() << " particles) did not find corresponding MCParticle!"
+                      << std::endl;
+    }
+  }
+
+  // ------------------------------------------------------
+  void SuperaMCParticleCluster::ApplyEnergyThreshold(std::vector<supera::ParticleGroup>& part_grp_v) const
+  {
+    // Loop again and eliminate voxels that has energy below threshold
+    for (auto &grp : part_grp_v)
+    {
+      larcv::VoxelSet vs;
+      vs.reserve(grp.vs.size());
+      for (auto const &vox : grp.vs.as_vector())
+      {
+        if (vox.value() < _edep_threshold) continue;
+        vs.emplace(vox.id(), vox.value(), true);
+      }
+      grp.vs = vs;
+      // If compton, here decide whether it should be supera::kComptonHE (high energy)
+      if (grp.type == supera::kCompton && grp.vs.size() > _compton_size)
+      {
+        //std::cout<<"Track ID "<<grp.part.track_id()<<" high energy compton"<<std::endl;
+        grp.type = supera::kComptonHE;
+      } else if (grp.type == supera::kOtherShower && grp.vs.size() > _compton_size)
+      {
+        //std::cout<<"Track ID "<<grp.part.track_id()<<" high energy compton"<<std::endl;
+        grp.type = supera::kOtherShowerHE;
+      }
+    }
+  }
+
+  // ------------------------------------------------------
+  std::vector<supera::ParticleGroup>
+  SuperaMCParticleCluster::CreateParticleGroups(const std::vector<larcv::Particle>& particles)
+  {
+    const larcv::Particle invalid_part;
+
+    auto const &parent_pdg_v = _mc_part_list.ParentPdgCode();
+    auto const &trackid2index = _mc_part_list.TrackIdToIndex();
+    std::vector<supera::ParticleGroup> result(trackid2index.size());
+    for (size_t index = 0; index < particles.size(); ++index)
+    {
+
+      auto const &mcpart = particles[index];
+      int pdg_code = abs(mcpart.pdg_code());
+      int mother_index = -1;
+      int track_id = mcpart.track_id();
+      if (mcpart.ancestor_track_id() < ((int) (trackid2index.size())))
+        mother_index = trackid2index[mcpart.ancestor_track_id()];
+
+      //if(pdg_code != -11 && pdg_code != 11 && pdg_code != 22) continue;
+      if (pdg_code > 1000000) continue;
+
+      supera::ParticleGroup grp;
+      grp.part = mcpart;
+
+      if (mother_index >= 0)
+        grp.part.parent_pdg_code(parent_pdg_v[index]);
+      grp.valid = true;
+
+      if (pdg_code == 22 || pdg_code == 11)
+      {
+        if (pdg_code == 22)
+        {
+          // photon ... reset first, last, and end position
+          grp.type = supera::kPhoton;
+          grp.part.first_step(invalid_part.first_step());
+          grp.part.last_step(invalid_part.last_step());
+          grp.part.end_position(invalid_part.end_position());
+        }
+        else if (pdg_code == 11)
+        {
+
+          const std::string & prc = mcpart.creation_process();
+          if (prc == "muIoni" || prc == "hIoni" || prc == "muPairProd")
+            grp.type = supera::kDelta;
+          else if (prc == "muMinusCaptureAtRest" || prc == "muPlusCaptureAtRest" || prc == "Decay")
+            grp.type = supera::kDecay;
+          else if (prc == "compt")
+            grp.type = supera::kCompton;
+          else if (prc == "phot")
+            grp.type = supera::kPhotoElectron;
+          else if (prc == "eIoni")
+            grp.type = supera::kIonization;
+          else if (prc == "conv")
+            grp.type = supera::kConversion;
+          else if (prc == "primary")
+            grp.type = supera::kPrimary;
+          else
+            grp.type = supera::kOtherShower;
+        }
+        result[track_id] = grp;
+      }
+      else
+      {
+        grp.type = supera::kTrack;
+        if (grp.part.pdg_code() == 2112)
+          grp.type = supera::kNeutron;
+        result[track_id] = grp;
+      }
+      /*
+      std::cout<<"Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code() << " " << grp.part.creation_process()
+	       <<" ... parent Track ID " << grp.part.parent_track_id() << " PDG " << grp.part.parent_pdg_code() << std::endl;
+      */
+    }
+
+    // fill parentage information
+
+    return result;
+  } // SuperaMCParticleCluster::CreateParticleGroups()
+
+  // ------------------------------------------------------
+  bool SuperaMCParticleCluster::IsTouching(const Voxel3DMeta& meta, const VoxelSet& vs1, const VoxelSet& vs2) const
+  {
+
+    bool touching = false;
+    size_t ix1, iy1, iz1;
+    size_t ix2, iy2, iz2;
+    size_t diffx, diffy, diffz;
+
+    for (auto const &vox1 : vs1.as_vector())
+    {
+      meta.id_to_xyz_index(vox1.id(), ix1, iy1, iz1);
+      for (auto const &vox2 : vs2.as_vector())
+      {
+        meta.id_to_xyz_index(vox2.id(), ix2, iy2, iz2);
+        if (ix1 > ix2) diffx = ix1 - ix2; else diffx = ix2 - ix1;
+        if (iy1 > iy2) diffy = iy1 - iy2; else diffy = iy2 - iy1;
+        if (iz1 > iz2) diffz = iz1 - iz2; else diffz = iz2 - iz1;
+        touching = diffx <= 1 && diffy <= 1 && diffz <= 1;
+        if (touching)
+        {
+          //std::cout<<"Touching ("<<ix1<<","<<iy1<<","<<iz1<<") ("<<ix2<<","<<iy2<<","<<iz2<<")"<<std::endl;
+          break;
+        }
+      }
+      if (touching) break;
+    }
+
+    return touching;
+  } // SuperaMCParticleCluster::IsTouching()
+
+  // ------------------------------------------------------
+  void SuperaMCParticleCluster::MergeShowerIonizations(std::vector<supera::ParticleGroup>& part_grp_v)
+  {
+    // Loop over particles of a type kIonization (=touching to its parent physically by definition)
+    // If a parent is found, merge to the parent
+    int merge_ctr = 0;
+    int invalid_ctr = 0;
+    do
+    {
+      merge_ctr = 0;
+      for (auto &grp : part_grp_v)
+      {
+        if (!grp.valid) continue;
+        if (grp.type != supera::kIonization) continue;
+        // merge to a valid "parent"
+        bool parent_found = false;
+        int parent_index = grp.part.parent_track_id();
+        int parent_index_before = grp.part.track_id();
+        while (true)
+        {
+          //std::cout<< "Inspecting: " << grp.part.track_id() << " => " << parent_index << std::endl;
+          if (parent_index < 0)
+          {
+            LARCV_DEBUG() << "Invalid parent track id " << parent_index
+                          << " Could not find a parent for " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
+                          << " " << grp.part.creation_process() << " E = " << grp.part.energy_init()
+                          << " (" << grp.part.energy_deposit() << ") MeV" << std::endl;
+            auto const &parent = part_grp_v[parent_index_before].part;
+            LARCV_DEBUG() << "Previous parent: " << parent.track_id() << " PDG " << parent.pdg_code()
+                          << " " << parent.creation_process()
+                          << std::endl;
+            parent_found = false;
+            invalid_ctr++;
+            break;
+            //throw std::exception();
+          }
+          auto const &parent = part_grp_v[parent_index];
+          parent_found = parent.valid;
+          if (parent_found) break;
+          else
+          {
+            int ancestor_index = parent.part.parent_track_id();
+            if (ancestor_index == parent_index)
+            {
+              LARCV_INFO() << "Particle " << parent_index << " is root and invalid particle..." << std::endl
+                           << "PDG " << parent.part.pdg_code() << " " << parent.part.creation_process() << std::endl;
+              break;
+            }
+            parent_index_before = parent_index;
+            parent_index = ancestor_index;
+          }
+        }
+        // if parent is found, merge
+        if (parent_found)
+        {
+          auto &parent = part_grp_v[parent_index];
+          parent.Merge(grp);
+          merge_ctr++;
+        }
+      } // for (grp)
+      LARCV_INFO() << "Ionization merge counter: " << merge_ctr << " invalid counter: " << invalid_ctr << std::endl;
+    } while (merge_ctr > 0);
+  } // SuperaMCParticleCluster::MergeShowerIonizations()
+
+  // ------------------------------------------------------
+  void SuperaMCParticleCluster::MergeShowerTouchingLEScatter(const larcv::Voxel3DMeta& meta,
+                                                             std::vector<supera::ParticleGroup>& part_grp_v)
+  {
+    size_t merge_ctr = 1;
+    while (merge_ctr)
+    {
+      merge_ctr = 0;
+      for (auto &grp : part_grp_v)
+      {
+        if (!grp.valid || grp.vs.size() < 1 || grp.shape() != larcv::kShapeLEScatter) continue;
+        // Find all direct shower-type or other LEScatter type parent
+        //auto const& parents = this->ParentShowerTrackIDs(grp.part.track_id(), part_grp_v, true);
+        auto const &parents = this->ParentTrackIDs(grp.part.track_id());
+        /*
+        std::cout<<"Inspecting LEScatter Track ID " << grp.part.track_id()
+           << " PDG " << grp.part.pdg_code()
+           << " " << grp.part.creation_process() << std::endl;
+        std::cout<< "  ... parents:"<<std::flush;
+        for(auto const& parent_trackid : parents) std::cout<<" "<<parent_trackid;
+        std::cout<<std::endl;
+        */
+        for (auto const &parent_trackid : parents)
+        {
+          auto &parent = part_grp_v[parent_trackid];
+          if (!parent.valid || parent.vs.size() < 1) continue;
+          if (this->IsTouching(meta, grp.vs, parent.vs))
+          {
+            parent.Merge(grp);
+            merge_ctr++;
+            break;
+          }
+        } // for (parent_trackid)
+      } // for (grp)
+    } // while (merge_ctr)
+  } // SuperaMCParticleCluster::MergeShowerTouchingLEScatter()
+
+  // ------------------------------------------------------
+  std::vector<unsigned int>
+  SuperaMCParticleCluster::ParentTrackIDs(size_t trackid,
+                                          const std::vector<larcv::Particle> & particles) const
+  {
+    auto const &trackid2index = _mc_part_list.TrackIdToIndex();
+    std::vector<unsigned int> result;
+
+    if (trackid >= trackid2index.size() || trackid2index[trackid] < 0)
+      return result;
+
+    int parent_trackid = particles[trackid2index[trackid]].parent_track_id();
+    std::set<int> accessed;
+    while (parent_trackid > 0 &&
+           (size_t) (parent_trackid) < trackid2index.size() &&
+           trackid2index[parent_trackid] >= 0)
+    {
+      if (accessed.find(parent_trackid) != accessed.end())
+      {
+        LARCV_CRITICAL() << "LOOP-LOGIC-ERROR for ParentTrackIDs for track id " << trackid << std::endl;
+        for (size_t parent_idx = 0; parent_idx < result.size(); ++parent_idx)
+        {
+          auto const &parent_trackid = result[parent_idx];
+          auto const &mcp = particles[trackid2index.at(parent_trackid)];
+          LARCV_CRITICAL() << "Parent " << parent_idx
+                           << " Track ID " << mcp.track_id() //<< " (" << parent_trackid << ")"
+                           << " PDG " << mcp.pdg_code()
+                           << " Process " << mcp.creation_process()
+                           << " Mother " << mcp.parent_track_id() << std::endl;
+        }
+        throw std::exception();
+      }
+
+      auto const &parent = particles[trackid2index[parent_trackid]];
+      result.push_back(parent_trackid);
+      accessed.insert(parent_trackid);
+      if (parent.parent_track_id() == parent_trackid) break;
+      parent_trackid = parent.parent_track_id();
+    }
+    return result;
+  }
+  // ------------------------------------------------------
 
 }
