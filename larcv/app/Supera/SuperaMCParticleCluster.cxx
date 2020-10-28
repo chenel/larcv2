@@ -648,18 +648,6 @@ namespace larcv
     event_cluster_le->meta(meta3d);
     event_leftover->meta(meta3d);
 
-    std::vector<larcv::ClusterPixel2D> vsa2d_v;          vsa2d_v.resize(_valid_nplanes);
-    std::vector<larcv::ClusterPixel2D> vsa2d_he_v;       vsa2d_he_v.resize(_valid_nplanes);
-    std::vector<larcv::ClusterPixel2D> vsa2d_le_v;       vsa2d_le_v.resize(_valid_nplanes);
-    for(size_t plane_idx=0; plane_idx<_valid_nplanes; ++plane_idx) {
-      vsa2d_v[plane_idx].resize(output2trackid.size());
-      vsa2d_he_v[plane_idx].resize(output2trackid.size());
-      vsa2d_le_v[plane_idx].resize(output2trackid.size());
-      vsa2d_v[plane_idx].meta(_meta2d_v[plane_idx]);
-      vsa2d_he_v[plane_idx].meta(_meta2d_v[plane_idx]);
-      vsa2d_le_v[plane_idx].meta(_meta2d_v[plane_idx]);
-    }
-
 
     // Create cluster index tensor to help back-track semantic source particle
     auto event_cindex = (EventSparseTensor3D*)(mgr.get_data("sparse3d",_output_label + "_index"));
@@ -719,19 +707,6 @@ namespace larcv
           cid_vs.emplace(vox.id(),index,false);
       }
       //grp.vs.clear_data();
-      // fill 2d cluster
-      for(size_t plane_idx=0; plane_idx<_valid_nplanes; ++plane_idx) {
-        auto& vsa2d = vsa2d_v[plane_idx];
-        vsa2d.writeable_voxel_set(index) = grp.vs2d_v[plane_idx];
-        if(semantic != kShapeLEScatter) {
-          auto& vsa2d_he = vsa2d_he_v[plane_idx];
-          vsa2d_he.writeable_voxel_set(index) = grp.vs2d_v[plane_idx];
-        }else{
-          auto& vsa2d_le = vsa2d_le_v[plane_idx];
-          vsa2d_le.writeable_voxel_set(index) = grp.vs2d_v[plane_idx];
-        }
-        grp.vs2d_v[plane_idx].clear_data();
-      }
       grp.valid=false;
     }
 
@@ -793,15 +768,6 @@ namespace larcv
       }
       grp.vs.clear_data();
       // fill 2d cluster
-      for(size_t plane_idx=0; plane_idx<_valid_nplanes; ++plane_idx) {
-        auto& vs2d = vsa2d_v[plane_idx].writeable_voxel_set(output_index);
-        auto& vs2d_le = vsa2d_le_v[plane_idx].writeable_voxel_set(output_index);
-        for(auto const& vox : grp.vs2d_v[plane_idx].as_vector()) {
-          vs2d.emplace(vox.id(),vox.value(),true);
-          vs2d_le.emplace(vox.id(),vox.value(),true);
-        }
-        grp.vs2d_v[plane_idx].clear_data();
-      }
     }
 
     // create particle ID vs ... overlapped voxel gets higher id number
@@ -816,19 +782,12 @@ namespace larcv
 
     LARCV_INFO()<<"Combined reminders..."<<std::endl;
     larcv::VoxelSet leftover_vs; leftover_vs.reserve(total_vs_size - output_vs_size);
-    std::vector<larcv::VoxelSet> leftover2d_vs(_valid_nplanes);
-    for(auto& vs : leftover2d_vs) vs.reserve(total_vs_size - output_vs_size);
 
     if(total_vs_size > output_vs_size) {
       int ctr= 0;
       for(auto& grp : part_grp_v) {
         if(grp.size_all()<1) continue;
         for(auto const& vox : grp.vs.as_vector()) leftover_vs.emplace(vox.id(),vox.value(),true);
-        for(size_t plane_idx=0; plane_idx<_valid_nplanes; ++plane_idx) {
-          for(auto const& vox : grp.vs2d_v[plane_idx].as_vector()) {
-            leftover2d_vs[plane_idx].emplace(vox.id(),vox.value(),true);
-          }
-        }
         ctr++;
         auto const& part = grp.part;
         LARCV_INFO() << "Particle ID " << part.id() << " Type " << grp.type << " Valid " << grp.valid << " Track ID " << part.track_id() << " PDG " << part.pdg_code()
@@ -930,10 +889,6 @@ namespace larcv
     auto event_segment = (EventSparseTensor3D*)(mgr.get_data("sparse3d",_output_label + "_semantics"));
     event_segment->meta(meta3d);
     larcv::VoxelSet semantic_vs; semantic_vs.reserve(total_vs_size);
-    // create semantic output in 2d
-    std::vector<larcv::VoxelSet> semantic2d_vs_v;
-    semantic2d_vs_v.resize(_valid_nplanes);
-    for(auto& vs : semantic2d_vs_v) vs.reserve(total_vs_size);
 
     /*
     for(size_t index=0; index<main_vs.size(); ++index) {
@@ -945,14 +900,6 @@ namespace larcv
     // Comptons in 3d
     for(auto const& vs : event_cluster_le->as_vector()) {
       for(auto const& vox : vs.as_vector()) semantic_vs.emplace(vox.id(),(float)(larcv::kShapeLEScatter),false);
-    }
-    // Comptons in 2d
-    for(size_t plane_idx=0; plane_idx<_valid_nplanes; ++plane_idx) {
-      auto& semantic2d = semantic2d_vs_v[plane_idx];
-      auto& vsa2d_le   = vsa2d_le_v[plane_idx];
-      for(auto const& vs : vsa2d_le.as_vector()) {
-        for(auto const& vox : vs.as_vector()) semantic2d.emplace(vox.id(),(float)(larcv::kShapeLEScatter),false);
-      }
     }
 
     // Loop over "high energy" depositions, set semantic labels
@@ -973,60 +920,11 @@ namespace larcv
           }
         }
       }
-      for(size_t plane_id=0; plane_id < _valid_nplanes; ++plane_id) {
-        auto& semantic2d_vs = semantic2d_vs_v[plane_id];
-        auto const& vsa2d_he = vsa2d_he_v[plane_id];
-        auto const& vs2d = vsa2d_he.as_vector()[index];
-        for(auto const& vox : vs2d.as_vector()) {
-          auto const& prev = semantic2d_vs.find(vox.id());
-          if(prev.id() == larcv::kINVALID_VOXELID)
-            semantic2d_vs.emplace(vox.id(),semantic,false);
-          else
-            semantic2d_vs.emplace(vox.id(),this->SemanticPriority(((size_t)(prev.value())),semantic),false);
-        }
-      }
     }
     // store
     assert(semantic_vs.size() == cid_vs.size());
     event_segment->emplace(std::move(semantic_vs),meta3d);
     event_cindex->emplace(std::move(cid_vs),meta3d);
-
-    for(size_t cryo_id=0; cryo_id<_scan.size(); ++cryo_id) {
-      auto const& tpcs = _scan[cryo_id];
-      for(size_t tpc_id=0; tpc_id<tpcs.size(); ++tpc_id) {
-        auto const& planes = tpcs[tpc_id];
-        for(size_t plane_id=0; plane_id<planes.size(); ++plane_id) {
-          auto const& idx = planes.at(plane_id);
-          if(idx < 0) continue;
-          if(idx >= (int)(_meta2d_v.size())) {
-            LARCV_CRITICAL() <<idx << "Unexpected: " << _meta2d_v.size() << " " << semantic2d_vs_v.size() << std::endl;
-            throw larbys();
-          }
-          auto meta2d = _meta2d_v[idx];
-          std::string suffix = "_" + std::to_string(cryo_id) + "_" + std::to_string(tpc_id) + "_" + std::to_string(plane_id);
-          std::string output_producer = _output_label + "_semantics2d" + suffix;
-          auto semantic2d_output = (larcv::EventSparseTensor2D*)(mgr.get_data("sparse2d",output_producer));
-          semantic2d_output->emplace(std::move(semantic2d_vs_v[idx]),std::move(meta2d));
-          output_producer = _output_label + suffix;
-          auto& cluster2d_output  = mgr.get_data<larcv::EventClusterPixel2D>(output_producer);
-          cluster2d_output.emplace(std::move(vsa2d_v[idx]));
-
-          output_producer = _output_label + "_he" + suffix;
-          auto& cluster2d_he_output  = mgr.get_data<larcv::EventClusterPixel2D>(output_producer);
-          cluster2d_he_output.emplace(std::move(vsa2d_he_v[idx]));
-
-          output_producer = _output_label + "_le" + suffix;
-          auto& cluster2d_le_output  = mgr.get_data<larcv::EventClusterPixel2D>(output_producer);
-          cluster2d_le_output.emplace(std::move(vsa2d_le_v[idx]));
-
-          output_producer = _output_label + "_leftover" + suffix;
-          auto& tensor2d_leftover  = mgr.get_data<larcv::EventSparseTensor2D>(output_producer);
-          meta2d = _meta2d_v[idx];
-          tensor2d_leftover.emplace(std::move(leftover2d_vs[idx]),std::move(meta2d));
-          //std::cout<<cryo_id<<" "<<tpc_id<<" "<<plane_id<<" ... " << semantic2d_output.as_vector().size() << " " << semantic2d_output.as_vector().front().meta().id() <<std::endl;
-        }
-      }
-    }
 
     // Store output
     auto event_mcp = (EventParticle*)(mgr.get_data("particle",_output_label));
