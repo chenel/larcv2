@@ -42,13 +42,6 @@ this->AddEDep(pt);
     this->trackid_v.push_back(child.part.track_id());
     for(auto const& trackid : child.trackid_v)
       this->trackid_v.push_back(trackid);
-    for(size_t plane_id=0; plane_id < vs2d_v.size(); ++plane_id) {
-      auto& vs2d = vs2d_v[plane_id];
-      auto& child_vs2d = child.vs2d_v[plane_id];
-      for(auto const& vox : child_vs2d.as_vector())
-        vs2d.emplace(vox.id(),vox.value(),true);
-      child_vs2d.clear_data();
-    }
     child.vs.clear_data();
     child.valid=false;
   }
@@ -86,8 +79,6 @@ this->AddEDep(pt);
   std::size_t ParticleGroup::size_all() const
   {
     std::size_t res=vs.size();
-    for(auto const& vs2d : vs2d_v)
-      res += vs2d.size();
     return res;
   }
 
