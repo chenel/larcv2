@@ -46,23 +46,15 @@ namespace larcv
       bool process(IOManager& mgr) override;
 
     private:
-      // todo: this is duplicated from SuperaG4HitSegment
-//      larcv::Particle MakeParticle(const TG4Trajectory&) const;
-
-      bool IsTouching(const Voxel3DMeta& meta, const VoxelSet& vs1, const VoxelSet& vs2) const;
-
       std::vector<supera::ParticleGroup> CreateParticleGroups(const std::vector<larcv::Particle> & particles);
 
       void AnalyzeSimEnergyDeposit(const larcv::Voxel3DMeta& meta,
                                    std::vector<supera::ParticleGroup>& part_grp_v,
                                    larcv::IOManager& mgr);
-
-//      void AnalyzeSimChannel(const larcv::Voxel3DMeta& meta,
-//                             std::vector<supera::ParticleGroup>& part_grp_v,
-//                             larcv::IOManager& mgr);
-//      void AnalyzeFirstLastStep(const larcv::Voxel3DMeta& meta,
-//                                std::vector<supera::ParticleGroup>& part_grp_v);
       void ApplyEnergyThreshold(std::vector<supera::ParticleGroup>& part_grp_v) const;
+      void DumpHierarchy(size_t trackid,
+                         const std::vector<supera::ParticleGroup>& part_grp_v) const;
+      bool IsTouching(const Voxel3DMeta& meta, const VoxelSet& vs1, const VoxelSet& vs2) const;
       void MergeShowerConversion(std::vector<supera::ParticleGroup>& part_grp_v);
       void MergeShowerIonizations(std::vector<supera::ParticleGroup>& part_grp_v);
       void MergeShowerFamilyTouching(const larcv::Voxel3DMeta& meta,
@@ -73,16 +65,14 @@ namespace larcv
       void MergeShowerTouchingLEScatter(const larcv::Voxel3DMeta& meta,
                                         std::vector<supera::ParticleGroup>& part_grp_v,
                                         const std::vector<larcv::Particle> & particles);
-      //void MergeShowerTouching2D(std::vector<supera::ParticleGroup>& part_grp_v);
       void MergeShowerDeltas(std::vector<supera::ParticleGroup>& part_grp_v) const;
-//      void DumpHierarchy(size_t trackid,
-//                         const std::vector<supera::ParticleGroup>& part_grp_v) const;
       std::vector<unsigned int> ParentShowerTrackIDs(size_t trackid,
                                                      const std::vector<supera::ParticleGroup>& part_grp_v,
                                                      const std::vector<larcv::Particle> & particles,
                                                      bool include_lescatter=false) const;
       std::vector<unsigned int> ParentTrackIDs(size_t trackid,
                                                const std::vector<larcv::Particle> & particles) const;
+      size_t SemanticPriority(size_t a, size_t b) const;
 
       supera::MCParticleList _mc_part_list;
       std::string _ref_meta3d_cluster3d;

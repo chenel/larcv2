@@ -1117,6 +1117,42 @@ namespace larcv
   } // SuperaMCParticleCluster::CreateParticleGroups()
 
   // ------------------------------------------------------
+  void SuperaMCParticleCluster::DumpHierarchy(size_t trackid,
+                                              const std::vector<supera::ParticleGroup>& part_grp_v) const
+  {
+    assert(trackid < part_grp_v.size());
+
+    auto const &grp = part_grp_v[trackid];
+    LARCV_DEBUG() << std::endl << "#### Dumping particle record for track id "
+              << grp.part.track_id() << " ####" << std::endl;
+    LARCV_DEBUG() << "id " << grp.part.id() << " from " << grp.part.parent_id() << std::endl
+              << "children: " << std::flush;
+    for (auto const &child : grp.part.children_id())
+      LARCV_DEBUG() << child << " " << std::flush;
+    LARCV_DEBUG() << std::endl;
+    LARCV_DEBUG() << grp.part.dump() << std::endl;
+
+    size_t parent_trackid = grp.part.parent_track_id();
+    while (parent_trackid < part_grp_v.size())
+    {
+
+      auto const &parent = part_grp_v[parent_trackid];
+      LARCV_DEBUG() << "Parent's group id: " << parent.part.group_id() << " valid? " << parent.valid << std::endl;
+      LARCV_DEBUG() << "Parent's children: " << std::flush;
+      for (auto const &child : parent.part.children_id())
+        LARCV_DEBUG() << child << " " << std::flush;
+      LARCV_DEBUG() << std::endl;
+      LARCV_DEBUG() << parent.part.dump() << std::endl;
+      if (parent_trackid == parent.part.parent_track_id())
+        break;
+      if (parent_trackid == larcv::kINVALID_UINT)
+        break;
+      parent_trackid = parent.part.parent_track_id();
+    }
+    LARCV_DEBUG() << std::endl << std::endl << "#### Dump done ####" << std::endl;
+  } // SuperaMCParticleCluster::DumpHierarchy()
+
+  // ------------------------------------------------------
   bool SuperaMCParticleCluster::IsTouching(const Voxel3DMeta& meta, const VoxelSet& vs1, const VoxelSet& vs2) const
   {
 
@@ -1606,6 +1642,20 @@ namespace larcv
     }
     return result;
   }
+
   // ------------------------------------------------------
+  size_t SuperaMCParticleCluster::SemanticPriority(size_t a, size_t b) const
+  {
+    if (a == b)
+      return a;
+    for (auto const &semantic : _semantic_priority)
+    {
+      if (a == semantic)
+        return a;
+      if (b == semantic)
+        return b;
+    }
+    return a;
+  }
 
 }
