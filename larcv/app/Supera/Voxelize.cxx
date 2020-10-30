@@ -21,14 +21,14 @@ namespace larcv
     double dist_travel = 0.;
     double energy_deposit = 0.;
     double smallest_side = std::min(meta.size_voxel_x(),std::min(meta.size_voxel_y(),meta.size_voxel_z()));
-    LARCV_INFO() <<"World: " << box.bounds[0] << " => " << box.bounds[1] << std::endl;
+    LARCV_SDEBUG() <<"World: " << box.bounds[0] << " => " << box.bounds[1] << std::endl;
 
     TVector3 start = hitSegment.GetStart().Vect();
     TVector3 end = hitSegment.GetStop().Vect();
     start *= 0.1;  // convert unit to cm
     end *= 0.1;
 
-    LARCV_INFO() << "Voxelizing TG4HitSegment for primary " << hitSegment.GetPrimaryId()
+    LARCV_SDEBUG() << "Voxelizing TG4HitSegment for primary " << hitSegment.GetPrimaryId()
                  << " from (" << start.x() << "," << start.y() << "," << start.z() << ")"
                  << " to (" << end.x() << "," << end.y() << "," << end.z() << ")"
                  << std::endl;
@@ -37,11 +37,11 @@ namespace larcv
     char crossings = Intersections(box, start, end, pt0, pt1);
 
     if(crossings == 0) {
-      LARCV_INFO() << "No crossing point found..." << std::endl;
+      LARCV_SDEBUG() << "No crossing point found..." << std::endl;
       return voxels;
     }
 
-    LARCV_DEBUG() << "   Intersects with bounding box at"
+    LARCV_SDEBUG() << "   Intersects with bounding box at"
                   << " (" << pt0.x << "," << pt0.y << "," << pt0.z << ")"
                   << " and (" << pt1.x << "," << pt1.y << "," << pt1.z << ")"
                   << std::endl;
@@ -66,7 +66,7 @@ namespace larcv
       //if(ctr>=10) break;
       // define the inspection box
       Vec3d pt = pt0 + dir * (t1 + epsilon);
-      LARCV_DEBUG() << "    New point: " << pt << std::endl;
+      LARCV_SDEBUG() << "    New point: " << pt << std::endl;
       auto vox_id = meta.id((double)(pt.x), (double)(pt.y), (double)(pt.z));
       if(vox_id==larcv::kINVALID_VOXELID) break;
       meta.id_to_xyz_index(vox_id, nx, ny, nz);
@@ -76,20 +76,20 @@ namespace larcv
       box.bounds[1].x = box.bounds[0].x + meta.size_voxel_x();
       box.bounds[1].y = box.bounds[0].y + meta.size_voxel_y();
       box.bounds[1].z = box.bounds[0].z + meta.size_voxel_z();
-      LARCV_DEBUG() << "    Inspecting a voxel id " << vox_id << " ... " << box.bounds[0] << " => " << box.bounds[1] << std::endl;
+      LARCV_SDEBUG() << "    Inspecting a voxel id " << vox_id << " ... " << box.bounds[0] << " => " << box.bounds[1] << std::endl;
       auto cross = box.intersect(ray,t0,t1);
 
       // no crossing
       if(cross==0) {
-        LARCV_ERROR() << "      No crossing (not expected) ... breaking" << std::endl;
+        LARCV_SERROR() << "      No crossing (not expected) ... breaking" << std::endl;
         break;
       }
       double dx;
       if(cross==1) {
-        LARCV_DEBUG() << "      One crossing: " << pt0 + dir * t1 << std::endl;
+        LARCV_SDEBUG() << "      One crossing: " << pt0 + dir * t1 << std::endl;
         dx = std::min(t1,length);
       }else {
-        LARCV_DEBUG() << "      Two crossing" << pt0 + dir * t0 << " => " << pt0 + dir * t1 << std::endl;
+        LARCV_SDEBUG() << "      Two crossing" << pt0 + dir * t0 << " => " << pt0 + dir * t1 << std::endl;
         if(t1>length) dx = length - t0;
         else dx = t1 - t0;
       }
@@ -105,14 +105,14 @@ namespace larcv
       dist_travel += dx;
       dist_section += dx;
       energy_deposit += energyInVoxel;
-      //LARCV_DEBUG() << "      Registering voxel id " << vox_id << " at distance fraction " << t1/length << std::endl;
-      LARCV_DEBUG() << "      Registering voxel id " << vox_id << " t1 =" << t1 << " (total length = " << length << ")" << std::endl;
+      //LARCV_SDEBUG() << "      Registering voxel id " << vox_id << " at distance fraction " << t1/length << std::endl;
+      LARCV_SDEBUG() << "      Registering voxel id " << vox_id << " t1 =" << t1 << " (total length = " << length << ")" << std::endl;
       if(t1>length) {
-        LARCV_DEBUG() << "      Reached the segment end (t1 = " << t1 << " fractional length " << t1/length << ") ... breaking" << std::endl;
+        LARCV_SDEBUG() << "      Reached the segment end (t1 = " << t1 << " fractional length " << t1/length << ") ... breaking" << std::endl;
         break;
       }
 
-      LARCV_DEBUG() << "      Updated t1 = " << t1 << " (fractional length " << t1/length << ")" << std::endl;
+      LARCV_SDEBUG() << "      Updated t1 = " << t1 << " (fractional length " << t1/length << ")" << std::endl;
     }
 
     particle.energy_deposit(particle.energy_deposit() + energy_deposit);
@@ -156,19 +156,19 @@ namespace larcv
           exitPoint = startPoint + (t1 - epsilon) * dir;
       }
 
-      LARCV_DEBUG() << "Number of crossings:" << cross
+      LARCV_SDEBUG() << "Number of crossings:" << cross
                     << " for bounding box and ray between "
                     << "(" << startPoint.x() << "," << startPoint.y() << "," << startPoint.z() << ")"
                     << " and (" <<  stopPoint.x() << "," << stopPoint.y() << "," << stopPoint.z() << ")" << std::endl;
-      LARCV_DEBUG() << "Start point contained?: " << startContained << ".  Stop point contained?: " << stopContained << std::endl;
+      LARCV_SDEBUG() << "Start point contained?: " << startContained << ".  Stop point contained?: " << stopContained << std::endl;
 
       if (cross == 1 && startContained == stopContained)
       {
-        LARCV_ERROR() << "Unexpected number of crossings (" << cross << ")"
+        LARCV_SERROR() << "Unexpected number of crossings (" << cross << ")"
                       << " for bounding box and ray between "
                       << "(" << startPoint.x() << "," << startPoint.y() << "," << startPoint.z() << ")"
                       << " and (" <<  stopPoint.x() << "," << stopPoint.y() << "," << stopPoint.z() << ")" << std::endl;
-        LARCV_ERROR() << "Start point contained?: " << startContained << ".  Stop point contained?: " << stopContained << std::endl;
+        LARCV_SERROR() << "Start point contained?: " << startContained << ".  Stop point contained?: " << stopContained << std::endl;
       }
 
       return cross;
