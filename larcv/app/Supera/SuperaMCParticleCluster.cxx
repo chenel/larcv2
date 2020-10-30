@@ -41,67 +41,6 @@ namespace larcv
     _use_sed_points = cfg.get<bool>("UseSimEnergyDepositPoints");
     _use_true_pos = cfg.get<bool>("UseTruePosition", true);
     _check_particle_validity = cfg.get<bool>("CheckParticleValidity", true);
-
-    // todo: do we need these?
-    auto tpc_v = cfg.get<std::vector<unsigned short> >("TPCList");
-    auto cryostat_v = cfg.get<std::vector<unsigned short> >("CryostatList");
-    auto plane_v = cfg.get<std::vector<unsigned short> >("PlaneList");
-
-    // todo: how do we establish world bounds without a stored geometry?  do we need them?
-//    larcv::Point3D min_pt(1.e9,1.e9,1.e9);
-//    larcv::Point3D max_pt(-1.e9,-1.e9,-1.e9);
-//    for(auto const& tpc_id : tpc_v) {
-//      auto geop = lar::providerFrom<geo::Geometry>();
-//      for(size_t c=0; c<geop->Ncryostats(); ++c) {
-//        auto const& cryostat = geop->Cryostat(c);
-//        if(!cryostat.HasTPC(tpc_id)) continue;
-//        auto const& tpcabox = cryostat.TPC(tpc_id).ActiveBoundingBox();
-//        if(min_pt.x > tpcabox.MinX()) min_pt.x = tpcabox.MinX();
-//        if(min_pt.y > tpcabox.MinY()) min_pt.y = tpcabox.MinY();
-//        if(min_pt.z > tpcabox.MinZ()) min_pt.z = tpcabox.MinZ();
-//        if(max_pt.x < tpcabox.MaxX()) max_pt.x = tpcabox.MaxX();
-//        if(max_pt.y < tpcabox.MaxY()) max_pt.y = tpcabox.MaxY();
-//        if(max_pt.z < tpcabox.MaxZ()) max_pt.z = tpcabox.MaxZ();
-//        break;
-//      }
-//    }
-//    _world_bounds.update(min_pt,max_pt);
-
-
-    // todo: do we need this stuff that contains info about the geometry?
-//    _scan.clear();
-//    auto geop = lar::providerFrom<geo::Geometry>();
-//    _scan.resize(geop->Ncryostats());
-//    for (size_t cryoid = 0; cryoid < _scan.size(); ++cryoid)
-//    {
-//      auto const &cryostat = geop->Cryostat(cryoid);
-//      auto &scan_cryo = _scan[cryoid];
-//      scan_cryo.resize(cryostat.NTPC());
-//      for (size_t tpcid = 0; tpcid < scan_cryo.size(); ++tpcid)
-//      {
-//        auto const &tpc = cryostat.TPC(tpcid);
-//        auto &scan_tpc = scan_cryo[tpcid];
-//        scan_tpc.resize(tpc.Nplanes(), -1);
-//      }
-//    }
-//    //for(size_t cryo_id=0; cryo_id<_scan.size(); ++cryo_id){
-//    _valid_nplanes = 0;
-//    for (auto const &cryo_id : cryostat_v)
-//    {
-//      auto const &cryostat = geop->Cryostat(cryo_id);
-//      for (auto const &tpc_id : tpc_v)
-//      {
-//        if (!cryostat.HasTPC(tpc_id)) continue;
-//        auto const &tpc = cryostat.TPC(tpc_id);
-//        for (auto const &plane_id : plane_v)
-//        {
-//          if (!tpc.HasPlane(plane_id)) continue;
-//          _scan[cryo_id][tpc_id][plane_id] = _valid_nplanes;
-//          //std::cout<<cryo_id<<" "<<tpc_id<<" "<<plane_id<<" ... "<<_valid_nplanes<< std::endl;
-//          ++_valid_nplanes;
-//        }
-//      }
-//    }
   }
 
   // ------------------------------------------------------

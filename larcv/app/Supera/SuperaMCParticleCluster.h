@@ -164,11 +164,6 @@ namespace larcv
       bool _check_particle_validity;
       int  _projection_id;
 
-      // todo: we aren't currently setting these in configure(), so don't allow them to be used
-//      larcv::BBox3D _world_bounds;
-//      std::vector<std::vector<std::vector<int> > > _scan;
-//      size_t _valid_nplanes;
-
       std::vector<size_t> _semantic_priority;
 
       void
