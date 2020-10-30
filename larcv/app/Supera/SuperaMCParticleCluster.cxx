@@ -23,6 +23,7 @@ namespace larcv
   {
     SuperaBase::configure(cfg);
 
+    _input_particle_label = cfg.get<std::string>("InputParticleLabel");
     _output_label = cfg.get<std::string>("OutputLabel");
     _ref_meta3d_cluster3d = cfg.get<std::string>("Meta3DFromCluster3D", "mcst");
     _ref_meta3d_tensor3d = cfg.get<std::string>("Meta3DFromTensor3D", "");
@@ -72,7 +73,7 @@ namespace larcv
     // Build MCParticle List.
     // Note that we made Particles in SuperaG4HitSegment.  We'll use those here.
     TG4Event const *ev = GetEvent();
-    const auto ev_particles = dynamic_cast<EventParticle *>(mgr.get_data("particle", _particle_producer));
+    const auto ev_particles = dynamic_cast<EventParticle *>(mgr.get_data("particle", _input_particle_label));
     const std::vector<larcv::Particle> & particles = ev_particles->as_vector();
     _mc_part_list.Update(particles, ev->RunId, ev->EventId);
 

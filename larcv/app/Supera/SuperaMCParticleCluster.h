@@ -150,6 +150,7 @@ namespace larcv
       std::string _ref_meta3d_cluster3d;
       std::string _ref_meta3d_tensor3d;
       std::string _ref_meta2d_tensor2d;
+      std::string _input_particle_label;
       std::string _output_label;
       std::string _masked_true2reco_cluster3d;
       std::string _masked_true_tensor3d;
