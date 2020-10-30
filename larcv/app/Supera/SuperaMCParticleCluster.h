@@ -56,8 +56,7 @@ namespace larcv
                                   std::vector<supera::ParticleGroup> &part_grp_v, std::vector<int> &trackid2output) const;
 
       void AnalyzeSimEnergyDeposit(const larcv::Voxel3DMeta& meta,
-                                   std::vector<supera::ParticleGroup>& part_grp_v,
-                                   larcv::IOManager& mgr);
+                                   std::vector<supera::ParticleGroup>& part_grp_v);
 
       void ApplyEnergyThreshold(std::vector<supera::ParticleGroup>& part_grp_v) const;
 

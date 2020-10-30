@@ -85,7 +85,7 @@ namespace larcv
 
     // Fill Voxel Information
     LARCV_INFO() << "Analyzing energy deposits" << std::endl;
-    this->AnalyzeSimEnergyDeposit(meta3d, part_grp_v, mgr);
+    this->AnalyzeSimEnergyDeposit(meta3d, part_grp_v);
 
     // Merge fragments of showers
     LARCV_INFO() << "Merging: shower ionization" << std::endl;
@@ -335,8 +335,7 @@ namespace larcv
 
   // ------------------------------------------------------
   void SuperaMCParticleCluster::AnalyzeSimEnergyDeposit(const larcv::Voxel3DMeta& meta,
-                                                        std::vector<supera::ParticleGroup>& part_grp_v,
-                                                        larcv::IOManager& mgr)
+                                                        std::vector<supera::ParticleGroup>& part_grp_v)
   {
     const auto & ev = this->GetEvent();
 
