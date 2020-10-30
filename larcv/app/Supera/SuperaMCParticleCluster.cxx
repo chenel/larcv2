@@ -589,10 +589,10 @@ namespace larcv
         // START_HERE 2020-04-23 ... use ParentTrackIDs(), make sure output_index is not int max
         while (true)
         {
-          if (trackid >= ((int) (trackid2index.size())) || trackid2index[trackid] < 0)
+          if (trackid >= trackid2index.size() || trackid2index[trackid] < 0)
             break;
           trackid = particles[trackid2index[trackid]].parent_track_id();
-          if (trackid < ((int) (trackid2output.size())))
+          if (trackid < trackid2output.size())
           {
             output_index = trackid2output[trackid];
             break;
@@ -772,7 +772,7 @@ namespace larcv
       int pdg_code = abs(mcpart.pdg_code());
       int mother_index = -1;
       unsigned int track_id = mcpart.track_id();
-      if (mcpart.ancestor_track_id() < ((int) (trackid2index.size())))
+      if (mcpart.ancestor_track_id() < trackid2index.size())
         mother_index = trackid2index[mcpart.ancestor_track_id()];
 
       //if(pdg_code != -11 && pdg_code != 11 && pdg_code != 22) continue;
@@ -1379,6 +1379,7 @@ namespace larcv
         while (true)
         {
           //std::cout<< "Inspecting: " << grp.part.track_id() << " => " << parent_index << std::endl;
+          // todo: this is always false since parent_track_id() always returns an unsigned int.  what's the "unknown parent" value?
           if (parent_index < 0)
           {
             LARCV_DEBUG() << "Invalid parent track id " << parent_index
@@ -1560,6 +1561,7 @@ namespace larcv
         while (true)
         {
           //std::cout<< "Inspecting: " << grp.part.track_id() << " => " << parent_index << std::endl;
+          // todo: this test is always false since parent_track_id() returns an unsigned int. what's the "unknown parent" value?
           if (parent_index < 0)
           {
             LARCV_DEBUG() << "Invalid parent track id " << parent_index
