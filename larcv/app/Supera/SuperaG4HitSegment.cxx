@@ -42,8 +42,10 @@ namespace larcv {
     larcv::AABBox<double> box(meta);
 
     std::vector<larcv::Particle> particles;
+    LARCV_INFO() << "There are " << evt->Trajectories.size() << " TG4Trajectories in this event" << std::endl;
     particles.reserve(evt->Trajectories.size());
-    for(auto const& traj : evt->Trajectories) {
+    for(auto const& traj : evt->Trajectories)
+    {
       larcv::Particle part = this->MakeParticle(traj, box);
       part.id(ev_particles->as_vector().size());
       LARCV_INFO() << "Track ID " << part.track_id() << " PDG " << part.pdg_code() << std::endl
@@ -55,7 +57,6 @@ namespace larcv {
                         << "[" << part.last_step().x() << "," << part.last_step().y() << "," << part.last_step().z() << "]"
                    << std::endl;
       particles.emplace_back(std::move(part));
-      break;
     }
 
     larcv::VoxelSet voxelSet;
@@ -96,12 +97,14 @@ namespace larcv {
     res.pdg_code(traj.GetPDGCode());
     auto const& mom = traj.GetInitialMomentum();
     res.momentum(mom.Px(),mom.Py(),mom.Pz());
-    auto const& start = traj.Points.front().GetPosition();
-    res.position(start.X()/10.,start.Y()/10.,start.Z()/10.,start.T());
-    auto const& end = traj.Points.back().GetPosition();
-    res.end_position(end.X()/10.,end.Y()/10.,end.Z()/10.,end.T());
+    TLorentzVector start = traj.Points.front().GetPosition();
+    start.SetVect(start.Vect() * 0.1);  // convert to cm
+    res.position(start.X(), start.Y(), start.Z(), start.T());
+    TLorentzVector end = traj.Points.back().GetPosition();
+    end.SetVect(end.Vect() * 0.1); // convert to cm
+    res.end_position(end.X(), end.Y(), end.Z(), end.T());
 
-    // this will be the first point the trajectory crosses into the bounding box
+    // this will be the first point the trajectory crosses into/out from the bounding box
     const auto FindVertex = [&](int step) -> std::unique_ptr<larcv::Vertex>
     {
       std::unique_ptr<larcv::Vertex> vtx;
@@ -116,16 +119,16 @@ namespace larcv {
       {
         TLorentzVector trajP1 = traj.Points[idx - step].GetPosition();
         TLorentzVector trajP2 = traj.Points[idx].GetPosition();
-        trajP1.SetRho(trajP1.Mag() * 0.1);  // convert units to cm
-        trajP2.SetRho(trajP2.Mag() * 0.1);  // convert units to cm
+        trajP1.SetVect(trajP1.Vect() * 0.1);  // convert units to cm
+        trajP2.SetVect(trajP2.Vect() * 0.1);  // convert units to cm
 
         LARCV_DEBUG() << "  Considering step (" << trajP1.X() << "," << trajP1.Y() << "," << trajP1.Z() << ")"
-                      << " -> " << trajP2.X() << "," << trajP2.Y() << "," << trajP2.Z() << ")" << std::endl;
+                      << " -> (" << trajP2.X() << "," << trajP2.Y() << "," << trajP2.Z() << ")" << std::endl;
 
         larcv::Vec3d p1, p2;
         if (!Intersections(bbox, trajP1.Vect(), trajP2.Vect(),p1, p2))
         {
-          LARCV_DEBUG() << "   --> does not intersect bounding box." << std::endl;
+          LARCV_DEBUG() << "   --> segment does not intersect bounding box." << std::endl;
           continue;
         }
 
@@ -137,20 +140,30 @@ namespace larcv {
       return vtx;
     };
 
-    auto entry = FindVertex(1);  // entry point -- step forward
-    if (entry)
-      res.first_step(*entry);
 
-    auto exit = FindVertex(-1);  // exit point -- step backwards
-    if (exit)
-      res.last_step(*exit);
+    if (bbox.contain(start))
+      res.first_step(res.position());
+    else
+    {
+      auto entry = FindVertex(1);  // entry point -- step forward
+      if (entry)
+        res.first_step(*entry);
+    }
 
+    if (bbox.contain(end))
+      res.last_step(res.end_position());
+    else
+    {
+      auto exit = FindVertex(-1);  // exit point -- step backwards
+      if (exit)
+        res.last_step(*exit);
+    }
     res.energy_init(mom.E());
     res.parent_track_id(traj.GetParentId());
 
     double distTraveled = 0;
     for (std::size_t idx = 1; idx < traj.Points.size(); idx++)
-      distTraveled += (traj.Points[idx].GetPosition().Vect() - traj.Points[idx-1].GetPosition().Vect()).Mag();
+      distTraveled += (traj.Points[idx].GetPosition().Vect() - traj.Points[idx-1].GetPosition().Vect()).Mag() * 0.1;
     res.distance_travel(distTraveled);
 
     return res;

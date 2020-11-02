@@ -52,8 +52,8 @@ namespace larcv
     larcv::Ray<double> ray(pt0, dir);
 
     int trackId = hitSegment.GetPrimaryId();
-    auto& particle = *std::find_if(particles.begin(), particles.end(),
-                                   [=](const larcv::Particle & p) { return p.track_id() == static_cast<unsigned int>(trackId); });
+    auto particle_it = std::find_if(particles.begin(), particles.end(),
+                                    [=](const larcv::Particle & p) { return p.track_id() == static_cast<unsigned int>(trackId); });
 
     voxels.reserve(voxels.size() + (size_t)(length / smallest_side));
     double t0, t1, dist_section;
@@ -115,9 +115,12 @@ namespace larcv
       LARCV_SDEBUG() << "      Updated t1 = " << t1 << " (fractional length " << t1/length << ")" << std::endl;
     }
 
-    particle.energy_deposit(particle.energy_deposit() + energy_deposit);
-    particle.num_voxels(particle.num_voxels() + voxels.size());
-
+    if (particle_it != particles.end())
+    {
+      auto & particle = *particle_it;
+      particle.energy_deposit(particle.energy_deposit() + energy_deposit);
+      particle.num_voxels(particle.num_voxels() + voxels.size());
+    }
     return voxels;
   }
 
@@ -146,6 +149,16 @@ namespace larcv
     {
       double t0, t1;
       int cross = bbox.intersect(ray, t0, t1);
+      // note that AABBox::intersect() will trace the ray to infinity in both directions,
+      // which may result in intersections beyond our segment of interest
+      if (cross > 0)
+      {
+        if ((!startContained && t0 < 0) || t0 > displVec.Mag())
+          cross--;
+        if (t1 < 0 || t1 > displVec.Mag())
+          cross--;
+      }
+
       if (cross > 0)
       {
         const T epsilon = 0.0001;
@@ -156,11 +169,19 @@ namespace larcv
           exitPoint = startPoint + (t1 - epsilon) * dir;
       }
 
-      LARCV_SDEBUG() << "Number of crossings:" << cross
-                    << " for bounding box and ray between "
-                    << "(" << startPoint.x() << "," << startPoint.y() << "," << startPoint.z() << ")"
+      LARCV_SDEBUG() << "Number of crossings=" << cross
+                    << " for bounding box " << bbox.bounds[0] << "-" << bbox.bounds[1]
+                    << " and ray between " << "(" << startPoint.x() << "," << startPoint.y() << "," << startPoint.z() << ")"
                     << " and (" <<  stopPoint.x() << "," << stopPoint.y() << "," << stopPoint.z() << ")" << std::endl;
-      LARCV_SDEBUG() << "Start point contained?: " << startContained << ".  Stop point contained?: " << stopContained << std::endl;
+      if (cross > 0)
+      {
+        LARCV_SDEBUG() << "Start point contained?: " << startContained << std::endl;
+        if (!startContained)
+          LARCV_SDEBUG() << "  entry point: " << entryPoint << "; t0=" << t0 << std::endl;
+        LARCV_SDEBUG() << "Stop point contained?: " << stopContained << std::endl;
+        if (!stopContained)
+          LARCV_SDEBUG() << "  exit point: " << exitPoint << "; t1=" << t1 << std::endl;
+      }
 
       if (cross == 1 && startContained == stopContained)
       {
