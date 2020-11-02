@@ -41,9 +41,6 @@ namespace larcv
     _compton_size = cfg.get<size_t>("ComptonSize", 10);
     _edep_threshold = cfg.get<double>("EnergyDepositThreshold", 0.01);
     _projection_id = cfg.get<int>("ProjectionID", -1);
-    _use_sed = cfg.get<bool>("UseSimEnergyDeposit");
-    _use_sed_points = cfg.get<bool>("UseSimEnergyDepositPoints");
-    _use_true_pos = cfg.get<bool>("UseTruePosition", true);
     _check_particle_validity = cfg.get<bool>("CheckParticleValidity", true);
   }
 

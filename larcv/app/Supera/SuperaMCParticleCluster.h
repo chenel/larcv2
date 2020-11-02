@@ -153,14 +153,11 @@ namespace larcv
       std::string _output_label;
       std::string _masked_true2reco_cluster3d;
       std::string _masked_true_tensor3d;
-      bool _use_sed_points;
       size_t _eioni_size;
       size_t _delta_size;
       size_t _compton_size;
       double _compton_energy;
       double _edep_threshold;
-      bool _use_true_pos;
-      bool _use_sed;
       bool _check_particle_validity;
       int  _projection_id;
 
