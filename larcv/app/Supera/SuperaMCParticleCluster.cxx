@@ -9,6 +9,9 @@
 
 namespace larcv
 {
+  static SuperaMCParticleClusterProcessFactory __global_SuperaMCParticleClusterProcessFactory__;
+
+
   // =============================================================================================
   //  public interface
   // =============================================================================================

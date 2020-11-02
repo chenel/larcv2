@@ -173,5 +173,30 @@ namespace larcv
                                const std::vector<larcv::VoxelSet> &lowe_vs) const;
   };
 
+  // ------------------------------------------------------
+
+  /**
+   \class larcv::SuperaBBoxInteractionFactory
+   \brief A concrete factory class for larcv::SuperaBBoxInteraction
+*/
+  class SuperaMCParticleClusterProcessFactory : public ProcessFactoryBase
+  {
+    public:
+      /// ctor
+      SuperaMCParticleClusterProcessFactory()
+      {
+        ProcessFactory::get().add_factory("SuperaMCParticleCluster", this);
+      }
+
+      /// dtor
+      ~SuperaMCParticleClusterProcessFactory() override = default;
+
+      /// creation method
+      ProcessBase* create(const std::string instance_name) override
+      {
+        return new SuperaMCParticleCluster(instance_name);
+      }
+  };
+
 }
 #endif //LARCV2_SUPERAMCPARTICLECLUSTER_H
