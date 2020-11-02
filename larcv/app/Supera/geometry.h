@@ -120,6 +120,14 @@ template<typename T>
         T x, y, z;
     };
 
+    template <typename T>
+    std::ostream& operator<<(std::ostream& os, const Vec3<T>& v)
+    {
+        os << "(" << v.x << "," << v.y << "," << v.z << ")";
+        return os;
+    }
+
+
 //[comment]
 // Now you can specialize the class. We are just showing two examples here. In your code
 // you can declare a vector either that way: Vec3<float> a, or that way: Vec3f a
