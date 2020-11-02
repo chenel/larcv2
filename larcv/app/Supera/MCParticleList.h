@@ -34,7 +34,9 @@ namespace supera {
   public:
 
     /// Default constructor
-    MCParticleList(){}
+    MCParticleList()
+      : _run(-1), _event(-1)
+    {}
 
     /// Default destructor
     ~MCParticleList(){}

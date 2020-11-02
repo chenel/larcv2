@@ -28,7 +28,8 @@ namespace supera{
       _trackid_v[index] = mcpart.track_id();
       _pdgcode_v[index] = abs(mcpart.pdg_code());
       _parent_trackid_v[index] = mcpart.parent_id();
-      if(mcpart.track_id() >= ((int)(_trackid2index.size()))) _trackid2index.resize(mcpart.track_id()+1,-1);
+      if(mcpart.track_id() >= _trackid2index.size())
+        _trackid2index.resize(mcpart.track_id()+1,-1);
       _trackid2index[mcpart.track_id()] = index;
     }
 
