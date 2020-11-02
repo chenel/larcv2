@@ -26,6 +26,8 @@ namespace larcv {
         int sign[3]; 
     }; 
 
+    /// Axis-aligned bounding box.
+    /// See https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
     template <typename T>
     class AABBox 
     { 
@@ -41,6 +43,16 @@ namespace larcv {
             bounds[0].x=box.min_x(); bounds[0].y=box.min_y(); bounds[0].z=box.min_z(); 
             bounds[1].x=box.max_x(); bounds[1].y=box.max_y(); bounds[1].z=box.max_z();
         }
+
+        /// Find locations of intersections of a given ray with this box.
+        ///
+        /// \param r   The ray
+        /// \param t0  The intersection closer to the ray's origin
+        /// \param t1  The intersection further from the ray's origin
+        /// \return    The number of intersections:
+        ///              If 0, t0 and t1 are meaningless
+        ///              If 1, t0 is meaningless; t1 indicates the intersection point
+        ///              If 2, both t0 and t1 are meaningful.
         int intersect(const Ray<T> &r, T& t0, T& t1) const
         { 
             T tmin, tmax, tymin, tymax, tzmin, tzmax;
