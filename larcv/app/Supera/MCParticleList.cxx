@@ -37,9 +37,10 @@ namespace supera{
       auto const& mcpart = particles[index];
       int mother_id      = mcpart.parent_id();
       int mother_index   = -1;
-      if(mother_id <= 0) mother_id = mcpart.track_id();
       if(mother_id < ((int)(_trackid2index.size()))) {
-        mother_index = _trackid2index[mother_id];
+        mother_index = std::distance(particles.begin(),
+                                     std::find_if(particles.begin(), particles.end(),
+                                                  [=](const larcv::Particle & part) {return part.id() == mother_id;}));
         if(mother_index >= 0) {
           _parent_pdg_v[index] = particles[mother_index].pdg_code();
           _parent_index_v[index] = mother_index;
