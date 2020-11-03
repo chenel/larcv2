@@ -52,14 +52,17 @@ namespace larcv {
     std::vector<larcv::Particle> particles;
     LARCV_INFO() << "There are " << evt->Trajectories.size() << " TG4Trajectories in this event" << std::endl;
     particles.reserve(evt->Trajectories.size());
+    std::size_t partCounter = 0;
     for(auto const& traj : evt->Trajectories)
     {
+      ++partCounter;
       const TG4Trajectory * parentTraj = (traj.GetParentId() >= 0 && traj.GetParentId() < static_cast<int>(evt->Trajectories.size()))
                                          ? &evt->Trajectories[traj.GetParentId()]
                                          : nullptr;
       larcv::Particle part = this->MakeParticle(traj, parentTraj, box);
-      part.id(ev_particles->as_vector().size());
-      LARCV_INFO() << "Track ID=" << part.track_id() << " PDG=" << part.pdg_code()  << " E=" << part.energy_init() << "MeV" << std::endl
+      part.id(partCounter);
+      LARCV_INFO() << "Made particle ID= " << part.id() << " from trajectory:" << std::endl
+                   << "   Track ID=" << part.track_id() << " PDG=" << part.pdg_code()  << " E=" << part.energy_init() << "MeV" << std::endl
                    << "     full extent: "
                         << "[" << part.position().x() << "," << part.position().y() << "," << part.position().z() << "] => "
                         << "[" << part.end_position().x() << "," << part.end_position().y() << "," << part.end_position().z() << "]" << std::endl
@@ -68,6 +71,28 @@ namespace larcv {
                         << "[" << part.last_step().x() << "," << part.last_step().y() << "," << part.last_step().z() << "]"
                    << std::endl;
       particles.emplace_back(std::move(part));
+    }
+
+    // particle parent IDs can't be assigned until the whole set of particles are assembled...
+    for (std::size_t partIdx = 0; partIdx < particles.size(); partIdx++)
+    {
+      if (particles[partIdx].parent_id() != larcv::kINVALID_USHORT)
+        continue;
+
+      // these are primaries and won't have parents anyway
+      if (particles[partIdx].parent_track_id() == larcv::kINVALID_UINT)
+        continue;
+
+      // parents have to have smaller indices, so walk backwards...
+      // (note that this will cause an integer underflow when it crosses 0, hence the odd-looking stop condition)
+      for (std::size_t parentIdx = partIdx; parentIdx <= partIdx; parentIdx--)
+      {
+        if (particles[parentIdx].track_id() == particles[partIdx].parent_track_id())
+        {
+          particles[partIdx].parent_id(particles[parentIdx].id());
+          break;
+        }
+      }
     }
 
     larcv::VoxelSet voxelSet;
@@ -124,11 +149,15 @@ namespace larcv {
     int creationCode = parentTraj ? traj.Points.front().GetSubprocess() : 0;
     int parentPdg = parentTraj ? parentTraj->GetPDGCode() : -1;
     res.creation_process(GetTrajCreationProc(creationCode, parentPdg));
+    res.parent_track_id(traj.GetParentId());
+    if (parentTraj)
+      res.parent_pdg_code(parentTraj->GetPDGCode());
 
     LARCV_DEBUG() << "Creating particle for TG4Trajectory:" << std::endl;
     LARCV_DEBUG() << "   track id=" << traj.GetTrackId() << std::endl;
     LARCV_DEBUG() << "   parent track id=" << traj.GetParentId() << std::endl;
     LARCV_DEBUG() << "   PDG=" << traj.GetPDGCode() << std::endl;
+    LARCV_DEBUG() << "   parent PDG=" << res.parent_pdg_code() << std::endl;
     LARCV_DEBUG() << "   Process/subprocess of initial step:" << traj.Points[0].GetProcess()
                   << "/" << traj.Points[0].GetSubprocess() << std::endl;
     LARCV_DEBUG() << "     --> assigned name:" << res.creation_process() << std::endl;
@@ -187,8 +216,8 @@ namespace larcv {
       if (exit)
         res.last_step(*exit);
     }
+
     res.energy_init(mom.E());
-    res.parent_track_id(traj.GetParentId());
 
     double distTraveled = 0;
     for (std::size_t idx = 1; idx < traj.Points.size(); idx++)
