@@ -32,35 +32,38 @@ namespace larcv {
      \class SuperaG4HitSegment
      Responsible for defining a rectangular volume boundary and voxelization
   */
-  class SuperaG4HitSegment : public SuperaBase {
+  class SuperaG4HitSegment : public SuperaBase
+  {
 
-  public:
+    public:
 
-    /// Default constructor
-    SuperaG4HitSegment(const std::string name = "SuperaG4HitSegment");
+      /// Default constructor
+      SuperaG4HitSegment(const std::string name = "SuperaG4HitSegment");
 
-    /// Default destructor
-    ~SuperaG4HitSegment() {}
+      /// Default destructor
+      ~SuperaG4HitSegment() {}
 
-    void configure(const PSet&);
+      void configure(const PSet&);
 
-    void initialize();
+      void initialize();
 
-    bool process(IOManager& mgr);
+      bool process(IOManager& mgr);
 
-    void finalize();
+      void finalize();
 
-  private:
+    private:
       /// Apply Landau fluctuations to the set of energies in these voxels
       void FluctuateEnergy(std::vector<Voxel> &voxels);
 
+      static std::string GetTrajCreationProc(int creationCode, int parentPdgCode) ;
 
-      larcv::Particle MakeParticle(const TG4Trajectory& traj,
-                                   const larcv::AABBox<double>& bbox);
+      larcv::Particle MakeParticle(const TG4Trajectory &traj,
+                                   const TG4Trajectory *parentTraj,
+                                   const larcv::AABBox<double> &bbox);
 
 
-    std::string _sparsetensor3d_producer;
-    std::string _particle_producer;
+      std::string _sparsetensor3d_producer;
+      std::string _particle_producer;
 
   };
 
