@@ -814,8 +814,15 @@ namespace larcv
       int pdg_code = abs(mcpart.pdg_code());
       int mother_index = -1;
       unsigned int track_id = mcpart.track_id();
-      if (mcpart.ancestor_track_id() < trackid2index.size())
-        mother_index = trackid2index[mcpart.ancestor_track_id()];
+      LARCV_DEBUG() << " for trackid=" << mcpart.track_id() << ", parent id=" << mcpart.parent_id()
+                    << " and parent trackid=" << mcpart.parent_track_id() << std::endl;
+      if (mcpart.parent_track_id() < trackid2index.size())
+      {
+        mother_index = trackid2index[mcpart.parent_track_id()];
+        LARCV_DEBUG() << "    which points to parent index=" << mother_index
+                      << " and corresponding parent pdg=" << parent_pdg_v[trackid2index[mcpart.track_id()]]
+                      << std::endl;
+      }
 
       //if(pdg_code != -11 && pdg_code != 11 && pdg_code != 22) continue;
       if (pdg_code > 1000000) continue;
