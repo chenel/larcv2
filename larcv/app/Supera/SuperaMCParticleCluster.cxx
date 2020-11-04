@@ -488,7 +488,9 @@ namespace larcv
       }
 
       unsigned int parent_trackid = grp.part.parent_track_id();
-      if (trackid2output[parent_trackid] >= 0)
+      LARCV_DEBUG() << "   initial parent track id:" << parent_trackid << std::endl;
+
+      if (parent_trackid != larcv::kINVALID_UINT && trackid2output[parent_trackid] >= 0)
       {
         LARCV_DEBUG() << "   --> assigning group for trackid " << trackid << " to parent: " << parent_trackid << std::endl;
         /*
@@ -510,7 +512,7 @@ namespace larcv
     for (auto &grp : part_grp_v)
     {
       auto &part = grp.part;
-      if (part.track_id() != part.parent_track_id())
+      if (part.parent_track_id() != larcv::kINVALID_UINT)
         continue;
       part.group_id(part.id());
       part.parent_id(part.id());
@@ -1292,6 +1294,7 @@ namespace larcv
       auto &parent = part_grp_v[parent_trackid].part;
       // if parent_id is invalid, try if parent_trackid can help out
       if (parent_id == kINVALID_INSTANCEID &&
+          parent_trackid != larcv::kINVALID_UINT &&
           trackid2output[parent_trackid] >= 0)
       {
         parent_id = trackid2output[parent_trackid];
@@ -1433,8 +1436,7 @@ namespace larcv
         while (true)
         {
           //std::cout<< "Inspecting: " << grp.part.track_id() << " => " << parent_index << std::endl;
-          // todo: this is always false since parent_track_id() always returns an unsigned int.  what's the "unknown parent" value?
-          if (parent_index < 0)
+          if (parent_index == larcv::kINVALID_UINT)
           {
             LARCV_DEBUG() << "Invalid parent track id " << parent_index
                           << " Could not find a parent for " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
@@ -1626,8 +1628,7 @@ namespace larcv
         while (true)
         {
           //std::cout<< "Inspecting: " << grp.part.track_id() << " => " << parent_index << std::endl;
-          // todo: this test is always false since parent_track_id() returns an unsigned int. what's the "unknown parent" value?
-          if (parent_index < 0)
+          if (parent_index == larcv::kINVALID_UINT)
           {
             LARCV_DEBUG() << "Invalid parent track id " << parent_index
                           << " Could not find a parent for " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
