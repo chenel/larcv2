@@ -1365,7 +1365,7 @@ namespace larcv
           case kShapeTrack:
           case kShapeLEScatter:
             // group candidate: check if it is "valid" = exists in the output
-            if (parent.valid)
+            if (trackid2output[parent_trackid] > 0)
             {
               group_id = trackid2output[parent_trackid];
               // found the valid group: stop the loop
@@ -1586,7 +1586,7 @@ namespace larcv
                       << ", and alleged parent track id=" <<  grp.part.parent_track_id()
                       << std::endl;
         // a direct parent ?
-        if(part_grp_v[grp.part.parent_track_id()].valid)
+        if(grp.part.parent_track_id() < part_grp_v.size() && part_grp_v[grp.part.parent_track_id()].valid)
           parent_trackid = grp.part.parent_track_id();
         else
         {
