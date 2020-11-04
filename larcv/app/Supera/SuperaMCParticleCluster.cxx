@@ -1161,6 +1161,9 @@ namespace larcv
           continue;
         assert(child.part.group_id() == kINVALID_INSTANCEID || child.part.group_id() == root_id);
         child.part.group_id(root_id);
+
+        // todo: is this correct?  if we don't, the parent_id points to a nonexistent particle group...
+        child.part.parent_id(root_id);
       }
 
       LARCV_INFO() << "... after update ... " << std::endl
@@ -1388,6 +1391,9 @@ namespace larcv
                    << "  Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
                    << " " << grp.part.creation_process() << std::endl;
       grp.part.group_id(group_id);
+      // todo: is this correct?  if we don't, the parent_id points to a nonexistent particle group...
+      grp.part.parent_id(group_id);
+
       trackid2output[trackid] = group_id;
     }
   }
