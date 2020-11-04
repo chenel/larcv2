@@ -1310,7 +1310,8 @@ namespace larcv
         parent_id = trackid2output[parent_trackid];
         grp.part.parent_id(parent_id);
       }
-      if (parent_id == kINVALID_INSTANCEID)
+      // note that for shower types, the parent_id was already reset to be the same as the id in FixInvalidParentShowerGroups()
+      if (parent_id == kINVALID_INSTANCEID || parent_id == grp.part.id())
         continue;
       // if parent id is set, make sure this particle is in the children
       auto children = parent.children_id();
