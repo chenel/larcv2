@@ -97,7 +97,7 @@ namespace larcv
                                         std::vector<int> &trackid2output,
                                         std::vector<int> &output2trackid) const;
 
-      void FixOrphanLEScatterGroups(const std::vector<larcv::Particle> &particles,
+      void FixOrphanNonShowerGroups(const std::vector<larcv::Particle> &particles,
                                     const std::vector<int> &output2trackid,
                                     std::vector<supera::ParticleGroup> &part_grp_v,
                                     std::vector<int> &trackid2output) const;

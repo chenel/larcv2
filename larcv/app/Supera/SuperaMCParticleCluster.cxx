@@ -155,7 +155,7 @@ namespace larcv
     // For LEScatter orphans, we need to register the immediate valid (=to be stored) particle
     LARCV_INFO() << "Searching the root (group) for kShapeLEScatter particles w/ invalid group id... ("
                  << output2trackid.size() << " particles total)" << std::endl;
-    this->FixOrphanLEScatterGroups(particles, output2trackid, part_grp_v, trackid2output);
+    this->FixOrphanNonShowerGroups(particles, output2trackid, part_grp_v, trackid2output);
 
 
     // for shower particles with invalid parent ID, attempt a search
@@ -1333,10 +1333,10 @@ namespace larcv
 
   // ------------------------------------------------------
 
- void SuperaMCParticleCluster::FixOrphanLEScatterGroups(const std::vector<larcv::Particle> &particles,
-                                                         const std::vector<int> &output2trackid,
-                                                         std::vector<supera::ParticleGroup> &part_grp_v,
-                                                         std::vector<int> &trackid2output) const
+ void SuperaMCParticleCluster::FixOrphanNonShowerGroups(const std::vector<larcv::Particle> &particles,
+                                                        const std::vector<int> &output2trackid,
+                                                        std::vector<supera::ParticleGroup> &part_grp_v,
+                                                        std::vector<int> &trackid2output) const
   {
     for (size_t out_index = 0; out_index < output2trackid.size(); ++out_index)
     {
@@ -1344,9 +1344,10 @@ namespace larcv
       auto &grp = part_grp_v[trackid];
       if (grp.part.group_id() != kINVALID_INSTANCEID)
         continue;
-      if (grp.shape() != kShapeLEScatter)
+      // these were fixed in FixOrphanShowerGroups()
+      if (grp.shape() == kShapeShower)
         continue;
-      LARCV_INFO() << " #### LEScatter ROOT SEARCH #### " << std::endl
+      LARCV_INFO() << " #### Non-shower ROOT SEARCH #### " << std::endl
                    << " Analyzing a particle index " << out_index << " id " << grp.part.id() << std::endl
                    << grp.part.dump() << std::endl;
 
@@ -1373,7 +1374,7 @@ namespace larcv
             break;
           case kShapeUnknown:
           case kShapeGhost:
-            LARCV_CRITICAL() << "Unexpected type found while searching for kShapeLEScatter orphans's root!"
+            LARCV_CRITICAL() << "Unexpected type found while searching for non-shower orphans's root!"
                              << std::endl;
             throw std::exception();
             break;
@@ -1383,12 +1384,12 @@ namespace larcv
       }
       if (group_id == kINVALID_INSTANCEID)
       {
-        LARCV_INFO() << "Ignoring kShapeLEScatter particle as its root particle (for group id) is not to be stored..."
+        LARCV_INFO() << "Ignoring non-shower particle as its root particle (for group id) is not to be stored..."
                      << std::endl
                      << grp.part.dump() << std::endl;
         continue;
       }
-      LARCV_INFO() << "Assigning a group ID " << group_id << " to kShapeLEScatter orphan" << std::endl
+      LARCV_INFO() << "Assigning a group ID " << group_id << " to non-shower orphan" << std::endl
                    << "  Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
                    << " " << grp.part.creation_process() << std::endl;
       grp.part.group_id(group_id);
