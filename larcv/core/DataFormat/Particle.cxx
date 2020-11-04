@@ -29,7 +29,13 @@ namespace larcv {
        << buf.str() << "Inittial Energy  = " << energy_init() << std::endl
        << buf.str() << "Deposit  Energy  = " << energy_deposit() << std::endl
        << buf.str() << "Creation Process = " << creation_process() << std::endl
-       << buf.str() << "Group ID = " << group_id() << std::endl;
+       << buf.str() << "Group ID = " << group_id() << std::endl
+       << buf.str() << "Shape = " << shape() << std::endl;
+    ss << buf.str() << "Children =  ";
+    for (const auto & child :  children_id())
+      ss << child;
+    ss << std::endl;
+
     ss << buf.str() << "BBox3D: " << _bb3d.dump();
     buf << "    ";
     for(size_t i=0; i<_bb2d_v.size(); ++i)
