@@ -75,12 +75,20 @@ namespace larcv
     TG4Event const *ev = GetEvent();
     const auto ev_particles = dynamic_cast<EventParticle *>(mgr.get_data("particle", _input_particle_label));
     const std::vector<larcv::Particle> & particles = ev_particles->as_vector();
+    LARCV_DEBUG() << "Loading event run/event = " << ev->RunId << "/" << ev->EventId << std::endl;
+    LARCV_DEBUG() << "Loaded " << particles.size() << " particles from label '" << _input_particle_label << "':" << std::endl;
+    for (const auto & p : particles)
+      LARCV_DEBUG() << "   trk id=" << p.track_id() << " pdg=" << p.pdg_code()
+                    << " start pos=(" << p.position().x() << "," << p.position().y() << "," << p.position().y() << ")"
+                    << " start momentum=(" << p.px() << "," << p.py() << "," << p.pz() << ")"
+                    << std::endl;
     _mc_part_list.Update(particles, ev->RunId, ev->EventId);
 
     auto const& trackid2index = _mc_part_list.TrackIdToIndex();
 
     // Create ParticleGroup
     LARCV_INFO() << "Creating ParticleGroups" << std::endl;
+    // there will be one group for each particle after this
     std::vector<supera::ParticleGroup> part_grp_v = this->CreateParticleGroups(particles);
 
     // Fill Voxel Information
@@ -301,7 +309,7 @@ namespace larcv
       LARCV_INFO() << "Particle ID " << part.id() << " Track ID " << part.track_id() << " PDG " << part.pdg_code()
                    << " " << part.creation_process() << " ... " << part.energy_init() << " MeV => "
                    << part.energy_deposit() << " MeV "
-                   << grp.trackid_v.size() << " children " << vs0.size() << " (" << vs1.size() << ") voxels"
+                   << grp.trackid_v.size() << " children " << vs0.size() << " voxels (" << vs1.size() << " low energy)"
                    << std::endl;
       LARCV_INFO() << "  Parent TrackID " << part.parent_track_id() << " PartID " << part.parent_id()
                    << " PDG " << part.parent_pdg_code() << " " << part.parent_creation_process()
@@ -354,7 +362,7 @@ namespace larcv
         std::for_each(std::begin(sedep.Contrib), std::end(sedep.Contrib),
                       [&trks](const int trk) { trks << " " << trk; });
         LARCV_DEBUG() << "Recording edep from tracks " << trks.str()
-                      << ", total Edep=" << sedep.EnergyDeposit
+                      << ": total Edep=" << sedep.EnergyDeposit
                       << ", start pos=(" << sedep.Start.Vect().X() << "," << sedep.Start.Vect().Y() << "," << sedep.Start.Vect().Z() << ")"
                       << std::endl;
         sedep_counter++;
@@ -363,6 +371,7 @@ namespace larcv
         int track_id = abs(sedep.GetPrimaryId());
         if (track_id >= ((int) (trackid2index.size())))
         {
+          LARCV_DEBUG() << "   Invalid track id for energy deposit of " << sedep.EnergyDeposit << " : " << track_id << std::endl;
           bad_sedep_counter++;
           missing_trackid.insert(track_id);
           continue;
@@ -378,6 +387,7 @@ namespace larcv
             continue;
           }
           //ctr_a.insert(vox_id);
+          LARCV_DEBUG() << "    created voxel: " << vox.id() << ", Edep = " << vox.value() << std::endl;
 
           supera::EDep pt;
           pt.x = meta.pos_x(vox.id());
@@ -401,6 +411,11 @@ namespace larcv
                       << "(from " << missing_trackid.size() << " particles) did not find corresponding MCParticle!"
                       << std::endl;
     }
+
+    LARCV_DEBUG() << "Particle groups now associated to the following true energy voxels:" << std::endl;
+    for (std::size_t idx = 0; idx < part_grp_v.size(); idx++)
+      LARCV_DEBUG() << "    track id=" << idx << ", pdg=" << part_grp_v[idx].part.pdg_code() << ": "
+                    << part_grp_v[idx].vs.size() << " voxels, Edep sum=" << part_grp_v[idx].vs.sum() << std::endl;
   } // SuperaMCParticleCluster::AnalyzeSimEnergyDeposit()
 
   // ------------------------------------------------------
@@ -413,15 +428,23 @@ namespace larcv
     output2trackid.clear();
 
     // assign particle group ID numbers and make sure they have all info set
+    LARCV_DEBUG() << "Considering incoming particle groups:" << std::endl;
     for (auto & grp : part_grp_v)
     {
+      LARCV_DEBUG() << " Particle ID=" << grp.part.id() << " Track ID=" << grp.part.track_id() << std::endl;
       grp.part.energy_deposit((grp.vs.size() ? grp.vs.sum() : 0.));
+      LARCV_DEBUG() << "     Edep=" << grp.part.energy_deposit() << std::endl;
       size_t output_counter = output2trackid.size();
       if (!grp.valid)
+      {
+        LARCV_DEBUG() << "   --> invalid group, skipping" << std::endl;
         continue;
+      }
       if (grp.size_all() < 1)
+      {
+        LARCV_DEBUG() << "   --> no voxels, skipping" << std::endl;
         continue;
-
+      }
       // Also define particle "first step" and "last step"
       auto &part = grp.part;
       auto const &first_pt = grp.first_pt;
@@ -434,9 +457,13 @@ namespace larcv
 
 
       if (grp.shape() == kShapeLEScatter)
+      {
+        LARCV_DEBUG() << "   --> LEScatter shape, skipping" << std::endl;
         continue;
+      }
 
       grp.part.id(output_counter);
+      LARCV_DEBUG() << "   --> Assigned output group id = " << grp.part.id() << std::endl;
       trackid2output[grp.part.track_id()] = output_counter;
       for (auto const &child : grp.trackid_v)
         trackid2output[child] = output_counter;
@@ -444,15 +471,26 @@ namespace larcv
       ++output_counter;
     }
 
+    LARCV_DEBUG() << "trackid2output (i.e., map of track IDs to output group IDs) contents:" << std::endl;
+    for (std::size_t idx = 0; idx < trackid2output.size(); idx++)
+      LARCV_DEBUG() << "   " << idx << " -> " << trackid2output[idx] << std::endl;
+
     // now assign relationships
+    LARCV_DEBUG() << "Assigning group relationships:" << std::endl;
     for (auto const &trackid : output2trackid)
     {
       auto &grp = part_grp_v[trackid];
+      LARCV_DEBUG() << "  Group for trackid=" << trackid << " (pdg = " << grp.part.pdg_code() << ")" << std::endl;
       if (abs(grp.part.pdg_code()) != 11 && abs(grp.part.pdg_code()) != 22)
+      {
+        LARCV_DEBUG() << "    ---> not EM, leaving alone" << std::endl;
         continue;
+      }
+
       unsigned int parent_trackid = grp.part.parent_track_id();
       if (trackid2output[parent_trackid] >= 0)
       {
+        LARCV_DEBUG() << "   --> assigning group for trackid " << trackid << " to parent: " << parent_trackid << std::endl;
         /*
         if(trackid2output[parent_trackid] < 0)
     grp.part.parent_id(grp.part.id());
@@ -463,10 +501,12 @@ namespace larcv
         int parent_id = output2trackid[parent_output_id];
         if (part_grp_v[parent_id].valid)
           part_grp_v[parent_id].part.children_id(grp.part.id());
-      }
+      } // if (parent_trackid != larcv::kINVALID_UINT)
+      else
+        LARCV_DEBUG() << "     --> no valid ancestor." << std::endl;
     }
 
-    // make sure the primary particle's parent and group id are set (they are themselves)
+    // make sure the primary particles' parent and group id are set (they are themselves)
     for (auto &grp : part_grp_v)
     {
       auto &part = grp.part;
@@ -825,10 +865,9 @@ namespace larcv
           grp.type = supera::kNeutron;
         result[track_id] = grp;
       }
-      /*
-      std::cout<<"Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code() << " " << grp.part.creation_process()
+      LARCV_DEBUG() <<"Track ID " << grp.part.track_id() << " PDG " << grp.part.pdg_code() << " " << grp.part.creation_process()
 	       <<" ... parent Track ID " << grp.part.parent_track_id() << " PDG " << grp.part.parent_pdg_code() << std::endl;
-      */
+
     }
 
     // fill parentage information
@@ -1017,6 +1056,11 @@ namespace larcv
                    << grp.part.dump() << std::endl;
 
       auto parent_trackid_v = ParentTrackIDs(trackid, particles);
+      std::stringstream ss;
+      ss << "   candidate ancestor track IDs:";
+      for (const auto & trkid : parent_trackid_v)
+        ss << " " << trkid;
+      LARCV_DEBUG() << ss.str() << std::endl;
       int root_id = grp.part.id();
       unsigned int root_trackid = grp.part.track_id();
       bool stop = false;
@@ -1036,12 +1080,14 @@ namespace larcv
             if (root_id >= 0)
             {
               // found the valid group: stop the loop
+              LARCV_DEBUG() << " found root ancestor: trkid " << root_id << std::endl;
               stop = true;
               // If not, root_id will be a new output index
             }
             else
             {
               root_id = output2trackid.size();
+              LARCV_DEBUG() << "  ancestor trkid " << root_id << " is also not in output.  keep looking..." <<  std::endl;
               // If this particle is invalid, this also needs the group id.
               // Add to intermediate_id_v list so we can set the group id for all of them
               intermediate_trackid_v.push_back(root_trackid);
@@ -1230,11 +1276,19 @@ namespace larcv
                                                           std::vector<int> &trackid2output,
                                                           std::vector<int> &output2trackid) const
   {
+    LARCV_DEBUG() << "Inspecting parent groups for unassigned entries..." << std::endl;
     for (int output_index : output2trackid)
     {
       auto &grp = part_grp_v[output_index];
       auto parent_trackid = grp.part.parent_track_id();
       auto parent_id = grp.part.parent_id();
+      LARCV_DEBUG() << "  index=" << output_index
+                    << "  id=" << grp.part.id()
+                    << "  track id=" << grp.part.track_id()
+                    << "  parent trackid=" << parent_trackid
+                    << "  parent id=" << parent_id
+                    << std::endl << std::flush;
+
       auto &parent = part_grp_v[parent_trackid].part;
       // if parent_id is invalid, try if parent_trackid can help out
       if (parent_id == kINVALID_INSTANCEID &&
@@ -1510,19 +1564,29 @@ namespace larcv
         if(grp.shape() != larcv::kShapeShower) continue;
         // search for a possible parent
         int parent_trackid = -1;
+        LARCV_DEBUG() << "   Found particle group with shape 'shower', PDG=" << grp.part.pdg_code()
+                      << "\n    track id=" << grp.part.track_id()
+                      << ", and alleged parent track id=" <<  grp.part.parent_track_id()
+                      << std::endl;
         // a direct parent ?
         if(part_grp_v[grp.part.parent_track_id()].valid)
           parent_trackid = grp.part.parent_track_id();
-        else {
-          for(size_t shower_trackid = 0; shower_trackid<part_grp_v.size(); ++shower_trackid) {
-            auto const& candidate_grp = part_grp_v[shower_trackid];
-            if(shower_trackid == grp.part.parent_track_id() || !candidate_grp.valid) continue;
-            for(auto const& trackid : candidate_grp.trackid_v) {
-              if(trackid != grp.part.parent_track_id()) continue;
+        else
+        {
+          for (size_t shower_trackid = 0; shower_trackid < part_grp_v.size(); ++shower_trackid)
+          {
+            auto const &candidate_grp = part_grp_v[shower_trackid];
+            if (shower_trackid == grp.part.parent_track_id() || !candidate_grp.valid)
+              continue;
+            for (auto const &trackid : candidate_grp.trackid_v)
+            {
+              if (trackid != grp.part.parent_track_id())
+                continue;
               parent_trackid = shower_trackid;
               break;
             }
-            if(parent_trackid >= 0) break;
+            if (parent_trackid >= 0)
+              break;
           }
         }
         if(parent_trackid < 0 || parent_trackid == (int)(grp.part.track_id())) continue;
@@ -1533,6 +1597,7 @@ namespace larcv
         if(this->IsTouching(meta,grp.vs,parent.vs)) {
           // if parent is found, merge
           parent.Merge(grp);
+          LARCV_DEBUG() << "   Merged to group w/ track id=" << parent.part.track_id() << std::endl;
           merge_ctr++;
         }
       }
