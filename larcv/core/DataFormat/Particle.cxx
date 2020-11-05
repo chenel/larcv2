@@ -33,7 +33,7 @@ namespace larcv {
        << buf.str() << "Shape = " << shape() << std::endl;
     ss << buf.str() << "Children =  ";
     for (const auto & child :  children_id())
-      ss << child;
+      ss << " " << child;
     ss << std::endl;
 
     ss << buf.str() << "BBox3D: " << _bb3d.dump();
