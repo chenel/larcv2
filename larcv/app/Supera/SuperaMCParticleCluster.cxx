@@ -441,7 +441,7 @@ namespace larcv
         LARCV_DEBUG() << "   --> invalid group, skipping" << std::endl;
         continue;
       }
-      if (grp.size_all() < 1)
+      if (grp.part.creation_process() != "primary" && grp.size_all() < 1)
       {
         LARCV_DEBUG() << "   --> no voxels, skipping" << std::endl;
         continue;
@@ -457,7 +457,7 @@ namespace larcv
         part.last_step(last_pt.x, last_pt.y, last_pt.z, last_pt.t);
 
 
-      if (grp.shape() == kShapeLEScatter)
+      if (grp.part.creation_process() != "primary" && grp.shape() == kShapeLEScatter)
       {
         LARCV_DEBUG() << "   --> LEScatter shape, skipping" << std::endl;
         continue;
@@ -678,9 +678,10 @@ namespace larcv
   SuperaMCParticleCluster::BuildOutputClusters(const std::vector<int> &output2trackid,
                                                EventClusterVoxel3D *event_cluster,
                                                EventClusterVoxel3D *event_cluster_he,
-                                               EventClusterVoxel3D *event_cluster_le, VoxelSet &cid_vs,
+                                               EventClusterVoxel3D *event_cluster_le,
+                                               VoxelSet &cid_vs  /* this comes in empty */,
                                                std::vector<supera::ParticleGroup> &part_grp_v,
-                                               std::vector<larcv::Particle> &part_v) const
+                                               std::vector<larcv::Particle> &part_v  /* this comes in empty */) const
   {
     event_cluster->resize(output2trackid.size());
     event_cluster_he->resize(output2trackid.size());
