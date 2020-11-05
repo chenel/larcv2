@@ -1091,14 +1091,14 @@ namespace larcv
             if (root_id >= 0)
             {
               // found the valid group: stop the loop
-              LARCV_DEBUG() << " found root ancestor: trkid " << root_id << std::endl;
+              LARCV_DEBUG() << " found root ancestor: trkid " << root_trackid << " (particle id " << root_id << ")" << std::endl;
               stop = true;
               // If not, root_id will be a new output index
             }
             else
             {
               root_id = output2trackid.size();
-              LARCV_DEBUG() << "  ancestor trkid " << root_id << " is also not in output.  keep looking..." <<  std::endl;
+              LARCV_DEBUG() << "  ancestor trkid " << root_trackid << " is also not in output.  keep looking..." <<  std::endl;
               // If this particle is invalid, this also needs the group id.
               // Add to intermediate_id_v list so we can set the group id for all of them
               intermediate_trackid_v.push_back(root_trackid);
@@ -1354,11 +1354,19 @@ namespace larcv
                    << grp.part.dump() << std::endl;
 
       auto parent_trackid_v = ParentTrackIDs(trackid, particles);
+      std::stringstream ss;
+      ss << "   candidate ancestor track IDs:";
+      for (const auto & trkid : parent_trackid_v)
+        ss << " " << trkid;
+      LARCV_DEBUG() << ss.str() << std::endl;
       size_t group_id = kINVALID_INSTANCEID;
       bool stop = false;
       for (auto const &parent_trackid : parent_trackid_v)
       {
         auto const &parent = part_grp_v[parent_trackid];
+        LARCV_DEBUG() << "     considering ancestor: " << parent_trackid
+                      << ", which has output index " << trackid2output[parent_trackid]
+                      << std::endl;
         switch (parent.shape())
         {
           case kShapeShower:
@@ -1369,6 +1377,7 @@ namespace larcv
             // group candidate: check if it is "valid" = exists in the output
             if (trackid2output[parent_trackid] > 0)
             {
+              LARCV_DEBUG() << "      -->  accepted" << std::endl;
               group_id = trackid2output[parent_trackid];
               // found the valid group: stop the loop
               stop = true;
