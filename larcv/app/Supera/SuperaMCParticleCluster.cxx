@@ -367,8 +367,9 @@ namespace larcv
                       << std::endl;
         sedep_counter++;
 
-
-        int track_id = abs(sedep.GetPrimaryId());
+        if (sedep.Contrib.size() != 1)
+          LARCV_WARNING() << "TG4HitSegment has multiple contributing tracks (" << sedep.Contrib.size() << ")" << std::endl;
+        int track_id = abs(sedep.Contrib.front());
         if (track_id >= ((int) (trackid2index.size())))
         {
           LARCV_DEBUG() << "   Invalid track id for energy deposit of " << sedep.EnergyDeposit << " : " << track_id << std::endl;
