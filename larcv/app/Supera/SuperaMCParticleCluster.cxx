@@ -1174,7 +1174,7 @@ namespace larcv
       for (auto const &child_id : root.part.children_id())
       {
         auto &child = part_grp_v[output2trackid[child_id]];
-        if (!child.valid)
+        if (child.valid)
           continue;
         LARCV_DEBUG() << "   group for trackid " << child.part.track_id() << " had group: " << child.part.group_id() << std::endl;
         assert(child.part.group_id() == kINVALID_INSTANCEID || child.part.group_id() == root_id);
