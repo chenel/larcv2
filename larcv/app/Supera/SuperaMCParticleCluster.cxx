@@ -1913,8 +1913,7 @@ namespace larcv
 
     unsigned int parent_trackid = particles[trackid2index[trackid]].parent_track_id();
     std::set<int> accessed;
-    while (parent_trackid > 0 &&
-           (size_t) (parent_trackid) < trackid2index.size() &&
+    while ((size_t) (parent_trackid) < trackid2index.size() &&
            trackid2index[parent_trackid] >= 0)
     {
       if (accessed.find(parent_trackid) != accessed.end())
