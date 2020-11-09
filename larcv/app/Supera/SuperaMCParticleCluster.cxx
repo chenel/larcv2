@@ -1,3 +1,106 @@
+/**
+ * SuperaMCParticleCluster: truth information clustering.
+ *
+ * This tool is intended to cluster together truth particles that subsequent reconstruction algorithms
+ * should also group together semantically.
+ *
+ * It is monstrously long, unfortunately complex, and filled with special cases.
+ * It will likely be difficult to understand on early readings.
+ *
+ * Here are a few tips to aid the process:
+ *   - GOALS / OUTPUTS:
+ *     The code is handed a collection of true particles from GEANT4 simulation in some form.
+ *     (In its original incarnation in standalone Supera code, it was from LArSoft's MCParticles.
+ *      Here, we depend on larcv::Particle objects created from edep-sim output in an upstream module.)
+ *     Its purpose is to create a NEW collection of larcv::Particles where the only particles that appear
+ *     are those that are at the top of "groups" of particles with some kind of shared semantic grouping.
+ *     Predominantly this means EM showers are grouped together under the heading of the initial particle
+ *     that initiated the shower, though there are some other cases treated as well (e.g., neutron-initiated activity).
+ *
+ *   - CODE FLOW:
+ *     The entry point for each event that's processed is the process() method.
+ *     All of the private helper methods are called from within process(), passing around the necessary containers.
+ *
+ *     The general idea is:
+ *       (1) The incoming larcv::Particle vector is mapped into a ParticleGroup vector, one-for-one:
+ *           CreateParticleGroups()
+ *
+ *       (2) All Particles that produce visible energy in the detector have the true energy voxelized and associated to them.
+ *           Any particles that don't are dropped from the output.
+ *           AnalyzeSimEnergyDeposit()
+ *
+ *       (3) Particles are merged together according to various criteria
+ *           MergeShowerIonizations()
+ *           MergeShowerTouchingLEScatter()
+ *           ApplyEnergyThreshold()
+ *           MergeShowerConversion()
+ *           MergeShowerFamilyTouching()
+ *           MergeShowerTouching()
+ *           MergeShowerDeltas()
+ *           MergeShowerTouchingLEScatter()
+ *
+ *       (4) Group IDs are assigned based on the remaining unmerged Particles
+ *           AssignParticleGroupIDs()
+ *
+ *       (5) Previous process often leaves some 'holes' in the parent/child group assignments,
+ *           so some cleanup/sanitization is done afterwards
+ *           FixOrphanShowerGroups()
+ *           FixOrphanNonShowerGroups()
+ *           FixInvalidParentShowerGroups()
+ *           FixUnassignedParentGroups()
+ *           FixUnassignedGroups()
+ *           FixUnassignedLEScatterGroups()
+ *           FixFirstStepInfo()
+ *
+ *       (6) A new Particle vector is constructed from the ParticleGroups' information and stored
+ *
+ *   - DATA STRUCTURE AND CONVENTIONS:
+ *     As it does its work this tool relies extensively on a number of working data structures:
+ *       * The incoming larcv::Particle objects from upstream: 'particles'
+ *
+ *       * A collection of ParticleGroup objects, 'part_grp_v', is used to assemble the information
+ *         that is eventually written out as the final std::vector<larcv::Particle>s.
+ *
+ *         One ParticleGroup is made (in CreateParticleGroups()) for each incoming larcv::Particle.
+ *         No ParticleGroup is ever erased (until the event is discarded at the end of process()).
+ *
+ *         Each ParticleGroup has several fields that are of essential importance:
+ *            --> The ParticleGroup::valid flag.  This is initialized to true.
+ *                A ParticleGroup becomes INVALID (ParticleGroup::valid == false)
+ *                when another ParticleGroup's Merge() method is called
+ *                with the first PG as an argument (see: the various Merge...() methods).
+ *
+ *                That is: an "INVALID" ParticleGroup is one that has been Merge()d to another ParticleGroup.
+*
+ *            --> The ParticleGroup::particle object.
+ *                This larcv::Particle represents the "top" particle in a semantic grouping (see GOALS/OUTPUTS).
+ *
+ *                It records decisions made about groupings in the following fields:
+ *                  * id:        Assigned initially sequentially based on the incoming Particles' id()s
+ *                  * group_id:  Initialized as larcv::kINVALID_UINT
+ *                               Reassigned throughout the grouping process so that every ParticleGroup that's merged
+ *                               to another one inherits the parent one's id (see previous)
+ *                               Primary particles always wind up with their own id() as their group_id()
+*                   * parent_id  For particles that have been "merged", this is meant to contain the group_id() of the
+ *                               particle at the top of the group.
+ *                               Otherwise:
+ *                                  + If the particle is primary, this field will contain its *own* ID
+ *                                  + If the particle's parent GEANT track corresponds to a ParticleGroup
+ *                                    that's being written out, this field will contain that ParticleGroup's group_id()
+ *
+ *       * A "filter" list, 'trackid2output', indicating whether any particular GEANT trackid corresponds to a Particle
+ *         in the output.  (It might not if, for instance, there was no visible energy deposited in the detector.)
+ *
+ *         Indexed by track id.  Output value is the index in the part_grp_v of the corresponding particle (or -1 if
+ *         not mapped to a Particle).
+ *
+ *       * A "reverse" map, 'output2trackid', which carries the same information as 'trackid2output' but indexed
+ *         by the output.
+ *
+ *
+ **/
+
+
 #include "SuperaMCParticleCluster.h"
 
 #include <numeric>
