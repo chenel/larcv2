@@ -1732,6 +1732,7 @@ namespace larcv
       for(auto& grp : part_grp_v) {
         if(!grp.valid) continue;
         if(grp.shape() != larcv::kShapeShower) continue;
+        if (grp.part.parent_track_id() == larcv::kINVALID_UINT) continue;  // primaries can't have parents
         // search for a possible parent
         int parent_trackid = -1;
         LARCV_DEBUG() << "   Found particle group with shape 'shower', PDG=" << grp.part.pdg_code()
