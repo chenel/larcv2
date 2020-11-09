@@ -611,7 +611,11 @@ namespace larcv
           part_grp_v[parent_id].part.children_id(grp.part.id());
       } // if (parent_trackid != larcv::kINVALID_UINT)
       else
-        LARCV_DEBUG() << "     --> no valid ancestor." << std::endl;
+      {
+        LARCV_DEBUG() << "     --> no valid ancestor.  Assigning this particle's parent ID to itself." << std::endl;
+        // otherwise checks in CheckParticleValidity() will fail (parent ID will point to something not in output)
+        grp.part.parent_id(grp.part.id());
+      }
     }
 
     // make sure the primary particles' parent and group id are set (they are themselves)
