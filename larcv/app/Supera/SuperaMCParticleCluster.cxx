@@ -1501,8 +1501,14 @@ namespace larcv
       {
         auto const &parent = part_grp_v[parent_trackid];
         LARCV_DEBUG() << "     considering ancestor: " << parent_trackid
-                      << ", which has output index " << trackid2output[parent_trackid]
+                      << ", which has output index " << trackid2output[parent_trackid] << ":" << std::endl
+                      << parent.part.dump()
                       << std::endl;
+        if (parent.part.pdg_code() == 0)
+        {
+          LARCV_DEBUG() << "      --> particle was removed from output (maybe a nuclear fragment?), keep looking" << std::endl;
+          continue;
+        }
         switch (parent.shape())
         {
           case kShapeShower:
