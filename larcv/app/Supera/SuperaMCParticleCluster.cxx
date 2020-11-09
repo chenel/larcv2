@@ -1212,10 +1212,10 @@ namespace larcv
           case kShapeMichel:
           case kShapeDelta:
             // group candidate: check if it is "valid" = exists in the output
-            root_trackid = parent_trackid;
-            root_id = trackid2output[root_trackid];
-            if (root_id >= 0)
+            if (trackid2output[parent_trackid] >= 0 && parent.valid)
             {
+              root_trackid = parent_trackid;
+              root_id = trackid2output[root_trackid];
               // found the valid group: stop the loop
               LARCV_DEBUG() << " found root ancestor: trkid " << root_trackid << " (particle id " << root_id << ")" << std::endl;
               stop = true;
@@ -1223,8 +1223,8 @@ namespace larcv
             }
             else
             {
-              root_id = output2trackid.size();
-              LARCV_DEBUG() << "  ancestor trkid " << root_trackid << " is also not in output.  keep looking..." <<  std::endl;
+//              root_id = output2trackid.size();
+              LARCV_DEBUG() << "  ancestor trkid " << parent_trackid << " is also not in output.  keep looking..." <<  std::endl;
               // If this particle is invalid, this also needs the group id.
               // Add to intermediate_id_v list so we can set the group id for all of them
               intermediate_trackid_v.push_back(root_trackid);
