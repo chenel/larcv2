@@ -64,6 +64,7 @@ namespace larcv {
 
       std::string _sparsetensor3d_producer;
       std::string _particle_producer;
+      std::vector<std::string> _active_volume_filter;  ///<  should we keep hits from only certain active volumes?  (keeps all if none specified)
 
   };
 

@@ -26,6 +26,7 @@ namespace larcv {
     SuperaBase::configure(cfg);
     _sparsetensor3d_producer=cfg.get<std::string>("HitTensorProducer");
     _particle_producer =cfg.get<std::string>("ParticleProducer");
+    _active_volume_filter = cfg.get<std::vector<std::string> >("ActiveVolumeFilterList");
   }
 
   // ------------------------------------------------------
@@ -100,6 +101,13 @@ namespace larcv {
     {
       LARCV_DEBUG() << "Sensitive detector: " << detPair.first << std::endl;
       LARCV_DEBUG() << "  There are " << detPair.second.size() << " hits" << std::endl;
+      if (!_active_volume_filter.empty()
+          && std::find(_active_volume_filter.begin(), _active_volume_filter.end(), detPair.first) == _active_volume_filter.end())
+      {
+        LARCV_DEBUG() << "This volume is not in the accept list (cfg param 'ActiveVolumeFilterList').  Skipping its hits." << std::endl;
+        continue;
+      }
+
       for (std::size_t hitIdx = 0; hitIdx < detPair.second.size(); hitIdx++)
       {
         LARCV_DEBUG() << "   hit number: " << hitIdx << std::endl;
