@@ -375,6 +375,7 @@ namespace larcv
         }
         else
         {
+          // todo: what if the new voxel has 10x the energy??
           size_t prioritized_semantic = this->SemanticPriority(prev.value(), semantic);
           if (prioritized_semantic != prev.value())
           {
