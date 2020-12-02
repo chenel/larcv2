@@ -42,7 +42,9 @@ for name in proc.process_names():
 for entry in range(*event_range):
 	print("considering event:", entry)
 	sys.stdout.flush()
-	ch.GetEntry(entry)
+	bytes = ch.GetEntry(entry)
+	if bytes < 1:
+		break
 
 	ev = ch.Event 
 
