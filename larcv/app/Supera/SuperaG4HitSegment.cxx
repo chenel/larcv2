@@ -63,7 +63,9 @@ namespace larcv {
       larcv::Particle part = this->MakeParticle(traj, parentTraj, box);
       part.id(partCounter);
       LARCV_INFO() << "Made particle ID= " << part.id() << " from trajectory:" << std::endl
-                   << "   Track ID=" << part.track_id() << " PDG=" << part.pdg_code()  << " E=" << part.energy_init() << "MeV" << std::endl
+                   << "   Track ID=" << part.track_id() << " PDG=" << part.pdg_code()
+                        << " KE=" << (part.energy_init() - sqrt(part.energy_init()*part.energy_init() - part.p()*part.p()))
+                        << " MeV" << std::endl
                    << "     full extent: "
                         << "[" << part.position().x() << "," << part.position().y() << "," << part.position().z() << "] => "
                         << "[" << part.end_position().x() << "," << part.end_position().y() << "," << part.end_position().z() << "]" << std::endl
