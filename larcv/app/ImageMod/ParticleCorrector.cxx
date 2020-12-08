@@ -98,9 +98,9 @@ namespace larcv {
       if( abs(particle.pdg_code()) == 11 || particle.pdg_code() == 22) correctEnd = false;
 
       LARCV_INFO() << "Index " << i << " ID " << particle.id() << " PDG: " << particle.pdg_code()
-		   << " start: (" << first_step.x << "," << first_step.y << "," << first_step.z << ") ..."
-		   << " end: (" << last_step.x << "," << last_step.y << "," << last_step.z << ") ..."
-		   << std::endl;
+                   << " start: (" << first_step.x << "," << first_step.y << "," << first_step.z << ") ..."
+                   << " end: (" << last_step.x << "," << last_step.y << "," << last_step.z << ") ..."
+                   << std::endl;
 
       // Check for cluster vs boundaries
       int i_best_start = -1;
@@ -109,37 +109,53 @@ namespace larcv {
       double distance_best_end = std::numeric_limits<double>::max();
       //correctStart = correctEnd = true;
       for(size_t j=0; j<vs.size(); ++j) {
-	if(vs[j].value() < _voxel_min_value) continue;
-	auto point3d = meta3d.position(vs[j].id());
+        if(vs[j].value() < _voxel_min_value) continue;
+        auto point3d = meta3d.position(vs[j].id());
+        LARCV_DEBUG() << "  point: (" << point3d.x << "," << point3d.y << "," << point3d.z << ")."
+                      << "  energy = " << vs[j].value() <<  std::endl;
 
-	//double distance_start = point3d.distance(particle.position().as_point3d());
-	if(correctStart) {
-	  double distance_start = point3d.distance(first_step);
-	  if (distance_start < distance_best_start) {
-	    i_best_start = j;
-	    distance_best_start = distance_start;
-	    //if(distance_start < 0.867) correctStart = false;
-	    if(distance_start < size_voxel) correctStart = false;
-	  }
-	}
-	//double distance_end = point3d.distance(particle.end_position().as_point3d());
-	if(correctEnd) {
-	  double distance_end = point3d.distance(last_step);
-	  if (distance_end < distance_best_end) {
-	    i_best_end = j;
-	    distance_best_end = distance_end;
-	    //if(distance_end < 0.867) correctEnd = false;
-	    if(distance_end < size_voxel) correctEnd = false;
-	  }
-	}
-	if(!correctStart && !correctEnd) break;
+        //double distance_start = point3d.distance(particle.position().as_point3d());
+        if(correctStart) {
+          double distance_start = point3d.distance(first_step);
+          LARCV_DEBUG() << "    dist to start = " << distance_start
+                        << " (previous closest is " << distance_best_start << ")"
+                        << std::endl;
+          if (distance_start < distance_best_start) {
+            LARCV_DEBUG() << "     --> this is closer.  updating" << std::endl;
+            i_best_start = j;
+            distance_best_start = distance_start;
+            //if(distance_start < 0.867) correctStart = false;
+            if(distance_start < size_voxel)
+            {
+              LARCV_DEBUG() << "     --> now within 1 voxel of true starting point.  not correcting start further" << std::endl;
+              correctStart = false;
+            }          }
+        }
+        //double distance_end = point3d.distance(particle.end_position().as_point3d());
+        if(correctEnd) {
+          double distance_end = point3d.distance(last_step);
+          LARCV_DEBUG() << "    dist to end = " << distance_end
+                        << " (previous closest is " << distance_best_end << ")"
+                        << std::endl;
+          if (distance_end < distance_best_end) {
+            LARCV_DEBUG() << "     --> this is closer.  updating" << std::endl;
+            i_best_end = j;
+            distance_best_end = distance_end;
+            //if(distance_end < 0.867) correctEnd = false;
+            if(distance_end < size_voxel)
+            {
+              LARCV_DEBUG() << "     --> now within 1 voxel of true end point.  not correcting end further" << std::endl;
+              correctEnd = false;
+            }          }
+        }
+        if(!correctStart && !correctEnd) break;
       }
 
       // Correct starting point
       if (correctStart && i_best_start > -1) {
-	auto const pt = meta3d.position(vs[i_best_start].id());
+        auto const pt = meta3d.position(vs[i_best_start].id());
         LARCV_INFO() << "  Correcting PDG " << particle.pdg_code() << " START"
-		     << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
+                     << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
         particle.first_step(pt.x, pt.y, pt.z, particle.first_step().t());
       }
       /*
@@ -150,9 +166,9 @@ namespace larcv {
       */
       // Correct end point
       if (correctEnd && i_best_end > -1) {
-	auto const pt = meta3d.position(vs[i_best_end].id());
+        auto const pt = meta3d.position(vs[i_best_end].id());
         LARCV_INFO() << "  Correcting PDG " << particle.pdg_code() << " END"
-		     << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
+                     << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
         particle.last_step(pt.x, pt.y, pt.z, particle.last_step().t());
       }
       /*

@@ -171,8 +171,19 @@ namespace larcv {
     LARCV_DEBUG() << "   Process/subprocess of initial step:" << traj.Points[0].GetProcess()
                   << "/" << traj.Points[0].GetSubprocess() << std::endl;
     LARCV_DEBUG() << "     --> assigned name:" << res.creation_process() << std::endl;
+    LARCV_DEBUG() << "   Trajectory steps:" << std::endl;
+    for (std::size_t idx = 1; idx < traj.Points.size(); idx ++)
+    {
+      TLorentzVector trajP1 = traj.Points[idx - 1].GetPosition();
+      TLorentzVector trajP2 = traj.Points[idx].GetPosition();
+      trajP1.SetVect(trajP1.Vect() * 0.1);  // convert units to cm
+      trajP2.SetVect(trajP2.Vect() * 0.1);  // convert units to cm
 
-    // this will be the first point the trajectory crosses into/out from the bounding box
+      LARCV_DEBUG() << "      (" << trajP1.X() << "," << trajP1.Y() << "," << trajP1.Z() << ")"
+                    << " -> (" << trajP2.X() << "," << trajP2.Y() << "," << trajP2.Z() << ")" << std::endl;
+    }
+
+      // this will be the first point the trajectory crosses into/out from the bounding box
     const auto FindVertex = [&](int step) -> std::unique_ptr<larcv::Vertex>
     {
       std::unique_ptr<larcv::Vertex> vtx;
@@ -233,6 +244,9 @@ namespace larcv {
     for (std::size_t idx = 1; idx < traj.Points.size(); idx++)
       distTraveled += (traj.Points[idx].GetPosition().Vect() - traj.Points[idx-1].GetPosition().Vect()).Mag() * 0.1;
     res.distance_travel(distTraveled);
+
+    LARCV_DEBUG() << "   Final track startpoint: " << res.first_step().dump() << std::endl;
+    LARCV_DEBUG() << "   Final track endpoint: " << res.last_step().dump() << std::endl;
 
     return res;
   }
