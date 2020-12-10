@@ -1668,60 +1668,38 @@ namespace larcv
       auto &parent = part_grp_v[parent_trackid];
       if (!parent.valid) continue;
 
-      // if voxel count is smaller than delta ray requirement, simply merge
-      if (grp.vs.size() < _delta_size)
+      // allows the test on unique voxels to be put in the if() below
+      // and only used if needed due to short-circuiting.
+      const auto UniqueVoxelCount = [](const supera::ParticleGroup & grp, const supera::ParticleGroup & parent)
       {
-        // if parent is found, merge
-        /*
-        if(grp.vs.size()>0) {
-          std::cout<<"Merging delta " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
-             << " " << grp.part.creation_process() << " vox count " << grp.vs.size() << std::endl
-             <<" ... parent found " << parent.part.track_id()
-             << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
-             << std::endl;
-          for(auto const& vs : grp.vs2d_v)
-            std::cout<<vs.size() << " " << std::flush;
-          std::cout<<std::endl;
-        }
-        */
-        parent.Merge(grp);
-      }
-      else
-      {
-        // check unique number of voxels
         size_t unique_voxel_count = 0;
         for (auto const &vox : grp.vs.as_vector())
         {
           if (parent.vs.find(vox.id()).id() == larcv::kINVALID_VOXELID)
             ++unique_voxel_count;
         }
-        if (unique_voxel_count < _delta_size)
-        {
-          // if parent is found, merge
-          /*
-          if(unique_voxel_count>0) {
-            std::cout<<"Merging delta " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
-               << " " << grp.part.creation_process() << " vox count " << grp.vs.size() << std::endl
-               <<" ... parent found " << parent.part.track_id()
-               << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
-               << std::endl;
-            for(auto const& vs : grp.vs2d_v)
-              std::cout<<vs.size() << " " << std::flush;
-            std::cout<<std::endl;
-          }
-          */
-          parent.Merge(grp);
-        }
-        /*
-        else{
-          std::cout<<"NOT merging delta " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
-             << " " << grp.part.creation_process() << " vox count " << grp.vs.size() << std::endl
-             <<" ... parent found " << parent.part.track_id()
-             << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
-             << std::endl;
-          for(auto const& vs : grp.vs2d_v)
-            std::cout<<vs.size() << " " << std::flush;
-          std::cout<<std::endl;
+        return unique_voxel_count;
+      };
+
+      // if voxel count is smaller than delta ray requirement, simply merge
+      if (grp.vs.size() < _delta_size || UniqueVoxelCount(grp, parent) < _delta_size)
+      {
+        // if parent is found, merge
+        LARCV_DEBUG() << "Merging delta " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
+                      << " " << grp.part.creation_process() << " vox count " << grp.vs.size() << std::endl
+                      <<" ... parent found " << parent.part.track_id()
+                      << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
+                      << std::endl;
+        LARCV_DEBUG() << "Time difference: " << grp.part.t() - parent.part.t() << std::endl;
+        parent.Merge(grp, parent.shape() != kShapeTrack);  // a delta ray is unlikely to extend a *track* in the up- or downstream directions
+      }
+      else
+      {
+        LARCV_DEBUG() <<"NOT merging delta " << grp.part.track_id() << " PDG " << grp.part.pdg_code()
+                      << " " << grp.part.creation_process() << " vox count " << grp.vs.size() << std::endl
+                      <<" ... parent found " << parent.part.track_id()
+                      << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
+                      << std::endl;
 
         }
         */
