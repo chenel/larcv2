@@ -77,7 +77,11 @@ namespace supera
     void AddEDep(const EDep& pt);
 
     /// Add another particle group into this one
-    void Merge(ParticleGroup& child, bool verbose=false);
+    ///
+    /// \param child         The child particle to be added
+    /// \param updatePoints  Update the beginning/end of this particle with the child's if the child extends further in either direction
+    /// \param verbose       Say what I'm doing as I do it
+    void Merge(ParticleGroup &child, bool updatePoints = true, bool verbose = false);
 
     /// Total count of voxels (3D + 2D) associated with this particle group
     std::size_t size_all() const;

@@ -515,7 +515,7 @@ namespace larcv
           if (!grp.valid) continue;
 
           grp.vs.emplace(vox.id(), vox.value(), true);
-          grp.AddEDep(pt);
+          grp.AddEDep(pt);  // updates the group's true "begin" and "end" using pt's position.
          } // for (vox)
       } // for (sedep)
     } // for (sensitiveDetPair)
