@@ -482,8 +482,13 @@ namespace larcv
           continue;
         }
 
-        for (const auto &vox : MakeVoxels(sedep, meta, noparticles))
+        const std::vector<Voxel> voxels = MakeVoxels(sedep, meta, noparticles);
+        double dT = sedep.GetStop().T() - sedep.GetStart().T();
+        if (voxels.size() > 1)
+          dT /= voxels.size();
+        for (std::size_t voxIdx = 0; voxIdx < voxels.size(); voxIdx++)
         {
+          const Voxel & vox = voxels[voxIdx];
           if (vox.id() == larcv::kINVALID_VOXELID)
           {
             LARCV_DEBUG() << "Skipping edep in invalid voxel: " << vox.id()
@@ -492,13 +497,17 @@ namespace larcv
             continue;
           }
           //ctr_a.insert(vox_id);
-          LARCV_DEBUG() << "    created voxel: " << vox.id() << ", Edep = " << vox.value() << std::endl;
+          double t = sedep.GetStart().T() + voxIdx * dT;
+          LARCV_DEBUG() << "    created voxel: " << vox.id()
+                        << ", Edep = " << vox.value()
+                        << ", t = " << t
+                        << std::endl;
 
           supera::EDep pt;
           pt.x = meta.pos_x(vox.id());
           pt.y = meta.pos_y(vox.id());
           pt.z = meta.pos_z(vox.id());
-          pt.t = sedep.Start.T();
+          pt.t = t;
           pt.e = vox.value();
 
 
