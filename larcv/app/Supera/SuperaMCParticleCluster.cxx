@@ -182,8 +182,9 @@ namespace larcv
     LARCV_DEBUG() << "Loaded " << particles.size() << " particles from label '" << _input_particle_label << "':" << std::endl;
     for (const auto & p : particles)
       LARCV_DEBUG() << "   trk id=" << p.track_id() << " pdg=" << p.pdg_code()
-                    << " start pos=(" << p.position().x() << "," << p.position().y() << "," << p.position().y() << ")"
+                    << " start pos=(" << p.position().x() << "," << p.position().y() << "," << p.position().z() << ")"
                     << " start momentum=(" << p.px() << "," << p.py() << "," << p.pz() << ")"
+                    << " end pos=(" << p.last_step().x() << "," << p.last_step().y() << "," << p.last_step().z() << ")"
                     << std::endl;
     _mc_part_list.Update(particles, ev->RunId, ev->EventId);
 
@@ -465,9 +466,10 @@ namespace larcv
         std::stringstream trks;
         std::for_each(std::begin(sedep.Contrib), std::end(sedep.Contrib),
                       [&trks](const int trk) { trks << " " << trk; });
-        LARCV_DEBUG() << "Recording edep from tracks " << trks.str()
+        LARCV_DEBUG() << "Recording edep from tracks" << trks.str()
                       << ": total Edep=" << sedep.EnergyDeposit
                       << ", start pos=(" << sedep.Start.Vect().X() << "," << sedep.Start.Vect().Y() << "," << sedep.Start.Vect().Z() << ")"
+                      << ", stop pos=(" << sedep.Stop.Vect().X() << "," << sedep.Stop.Vect().Y() << "," << sedep.Stop.Vect().Z() << ")"
                       << std::endl;
         sedep_counter++;
 
@@ -546,7 +548,6 @@ namespace larcv
     for (auto & grp : part_grp_v)
     {
       LARCV_DEBUG() << " Particle ID=" << grp.part.id() << " Track ID=" << grp.part.track_id() << std::endl;
-      grp.part.energy_deposit((grp.vs.size() ? grp.vs.sum() : 0.));
       LARCV_DEBUG() << "     Edep=" << grp.part.energy_deposit() << std::endl;
       size_t output_counter = output2trackid.size();
       if (!grp.valid)
@@ -563,11 +564,14 @@ namespace larcv
       auto &part = grp.part;
       auto const &first_pt = grp.first_pt;
       auto const &last_pt = grp.last_pt;
-      //std::cout<<first_pt.x<< " " << first_pt.y << " " << first_pt.z << std::endl;
+      LARCV_DEBUG() << "      examining true particle start:" << first_pt.x<< " " << first_pt.y << " " << first_pt.z << std::endl;
       if (first_pt.t != kINVALID_DOUBLE)
         part.first_step(first_pt.x, first_pt.y, first_pt.z, first_pt.t);
       if (last_pt.t != kINVALID_DOUBLE)
         part.last_step(last_pt.x, last_pt.y, last_pt.z, last_pt.t);
+      LARCV_DEBUG() << "     true particle start: " << grp.part.first_step().dump()
+                    << "                   end: " << grp.part.last_step().dump();
+      grp.part.energy_deposit((grp.vs.size() ? grp.vs.sum() : 0.));
 
 
       if (grp.part.creation_process() != "primary" && grp.shape() == kShapeLEScatter)
@@ -1701,11 +1705,9 @@ namespace larcv
                       << " PDG " << parent.part.pdg_code() << " " << parent.part.creation_process()
                       << std::endl;
 
-        }
-        */
       }
     }
-  } // SuperaMCParticleCluster::MergeShowerDeltas()
+} // SuperaMCParticleCluster::MergeShowerDeltas()
 
   // ------------------------------------------------------
   void SuperaMCParticleCluster::MergeShowerFamilyTouching(const larcv::Voxel3DMeta& meta,
