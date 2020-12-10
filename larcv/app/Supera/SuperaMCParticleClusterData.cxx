@@ -1,5 +1,7 @@
 #include "SuperaMCParticleClusterData.h"
 
+#include "larcv/core/Base/larcv_logger.h"
+
 namespace supera
 {
   // -------------------------------------
@@ -16,29 +18,39 @@ namespace supera
   {
     if(pt.x == larcv::kINVALID_DOUBLE) return;
     //start.AddEDep(pt);
-    if(pt.t < first_pt.t) first_pt = pt;
-    if(pt.t > last_pt.t) last_pt = pt;
+    if(pt.t < first_pt.t)
+    {
+      first_pt = pt;
+      LARCV_SDEBUG() << " Start point now (" << this->first_pt.x << "," << this->first_pt.y << "," << this->first_pt.z << ")" << std::endl;
+    }
+    if(pt.t > last_pt.t)
+    {
+      last_pt = pt;
+      LARCV_SDEBUG() << " End point now (" << this->last_pt.x << "," << this->last_pt.y << "," << this->last_pt.z << ")" << std::endl;
+    }
   }
 
   // -------------------------------------
 
-  void ParticleGroup::Merge(ParticleGroup& child, bool verbose)
+  void ParticleGroup::Merge(ParticleGroup &child, bool updatePoints)
   {
     for(auto const& vox : child.vs.as_vector())
       this->vs.emplace(vox.id(),vox.value(),true);
 
-    if(verbose) {
-      std::cout<<"Parent track id " << this->part.track_id()
-               << " PDG " << this->part.pdg_code() << " " << this->part.creation_process() << std::endl
-               << "  ... merging " << child.part.track_id()
-               << " PDG " << child.part.pdg_code() << " " << child.part.creation_process() << std::endl;
-    }
+    LARCV_SDEBUG() << "Parent track id " << this->part.track_id()
+                   << " PDG " << this->part.pdg_code() << " " << this->part.creation_process() << std::endl
+                   << "  ... merging " << child.part.track_id()
+                   << " PDG " << child.part.pdg_code() << " " << child.part.creation_process() << std::endl;
     /*
     for(auto const& pt : child.start.pts)
 this->AddEDep(pt);
     */
-    this->AddEDep(child.last_pt);
-    this->AddEDep(child.first_pt);
+    if(updatePoints)
+    {
+      this->AddEDep(child.last_pt);
+      this->AddEDep(child.first_pt);
+    }
+
     this->trackid_v.push_back(child.part.track_id());
     for(auto const& trackid : child.trackid_v)
       this->trackid_v.push_back(trackid);
