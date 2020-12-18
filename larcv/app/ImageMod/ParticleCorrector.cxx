@@ -162,7 +162,7 @@ namespace larcv {
       }
 
       // Correct starting point
-      if (correctStart && i_best_start > -1) {
+      if (i_best_start > -1) {
         auto const pt = meta3d.position(vs[i_best_start].id());
         LARCV_INFO() << "  Correcting PDG " << particle.pdg_code() << " START"
                      << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
@@ -175,7 +175,7 @@ namespace larcv {
       }
       */
       // Correct end point
-      if (correctEnd && i_best_end > -1) {
+      if (i_best_end > -1) {
         auto const pt = meta3d.position(vs[i_best_end].id());
         LARCV_INFO() << "  Correcting PDG " << particle.pdg_code() << " END"
                      << " XYZ (" << pt.x << "," << pt.y << "," << pt.z << ")" << std::endl;
