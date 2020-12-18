@@ -34,11 +34,14 @@ namespace larcv
   /// \param[in]  hitSegment   The TG4HitSegment to operate on
   /// \param[in]  meta         Metadata about the voxel array
   /// \param[in] particles     Collection of true particles whose recorded energy deposits will be updated.  Pass empty vector to disable
+  /// \param[in] refTrajs      Collection of true trajectories to use to check the track ids coming from segments.
+  ///                          (Sometimes the TG4HitSegment::Contribs point to a track higher up in the hierarchy of tracks.)
   /// \return                  A vector of voxels
   std::vector <larcv::Voxel>
   MakeVoxels(const ::TG4HitSegment &hitSegment,
              const larcv::Voxel3DMeta &meta,
-             std::vector <larcv::Particle> &particles);
+             std::vector <larcv::Particle> &particles,
+             const std::vector<::TG4Trajectory> & refTrajs = {});
 
   /// Where (if anywhere) does a line segment intersect a given bounding box?
   /// (If the entire line segment is contained, the entry and exit points

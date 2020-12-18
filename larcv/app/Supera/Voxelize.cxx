@@ -28,7 +28,33 @@ namespace larcv
     start *= 0.1;  // convert unit to cm
     end *= 0.1;
 
-    LARCV_SDEBUG() << "Voxelizing TG4HitSegment for primary " << hitSegment.GetPrimaryId()
+    const auto FindParticle = [&particles](int trackId) -> larcv::Particle*
+    {
+      auto itPart = std::find_if(particles.begin(), particles.end(),
+                                 [=](const larcv::Particle & p) { return p.track_id() == static_cast<unsigned int>(trackId); });
+      if (itPart == particles.end())
+        return nullptr;
+
+      return &(*itPart);
+    };
+
+    int trackId; // = hitSegment.GetPrimaryId();
+    if (hitSegment.Contrib.size() == 1)
+      trackId = hitSegment.Contrib.front();
+    //else if (std::find(hitSegment.Contrib.begin(), hitSegment.Contrib.end(), hitSegment.GetPrimaryId()) != hitSegment.Contrib.end())
+    //  trackId = hitSegment.GetPrimaryId();
+    else
+    {
+      LARCV_SWARNING() << "Could not determine which GEANT track ID to assign edep-sim energy to!" << std::endl;
+      std::stringstream trks;
+      std::for_each(std::begin(hitSegment.Contrib), std::end(hitSegment.Contrib),
+                    [&trks](const int trk) { trks << " " << trk; });
+      LARCV_SWARNING() << "  Chose the first of:" << trks.str() << std::endl;
+      trackId = hitSegment.Contrib.front();
+    }
+    auto particle = FindParticle(trackId);
+
+    LARCV_SDEBUG() << "Voxelizing TG4HitSegment for GEANT track " << trackId
                  << " from (" << start.x() << "," << start.y() << "," << start.z() << ")"
                  << " to (" << end.x() << "," << end.y() << "," << end.z() << ")"
                  << std::endl;
@@ -51,9 +77,6 @@ namespace larcv
     dir.normalize();
     larcv::Ray<double> ray(pt0, dir);
 
-    int trackId = hitSegment.GetPrimaryId();
-    auto particle_it = std::find_if(particles.begin(), particles.end(),
-                                    [=](const larcv::Particle & p) { return p.track_id() == static_cast<unsigned int>(trackId); });
 
     voxels.reserve(voxels.size() + (size_t)(length / smallest_side));
     double t0, t1, dist_section;
@@ -115,11 +138,10 @@ namespace larcv
       LARCV_SDEBUG() << "      Updated t1 = " << t1 << " (fractional length " << t1/length << ")" << std::endl;
     }
 
-    if (particle_it != particles.end())
+    if (particle)
     {
-      auto & particle = *particle_it;
-      particle.energy_deposit(particle.energy_deposit() + energy_deposit);
-      particle.num_voxels(particle.num_voxels() + voxels.size());
+      particle->energy_deposit(particle->energy_deposit() + energy_deposit);
+      particle->num_voxels(particle->num_voxels() + voxels.size());
     }
     return voxels;
   }
