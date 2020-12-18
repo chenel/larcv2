@@ -466,10 +466,14 @@ namespace larcv
         std::stringstream trks;
         std::for_each(std::begin(sedep.Contrib), std::end(sedep.Contrib),
                       [&trks](const int trk) { trks << " " << trk; });
-        LARCV_DEBUG() << "Recording edep from tracks" << trks.str()
+        LARCV_DEBUG() << "Recording edep from GEANT trackids" << trks.str()
                       << ": total Edep=" << sedep.EnergyDeposit
-                      << ", start pos=(" << sedep.Start.Vect().X() << "," << sedep.Start.Vect().Y() << "," << sedep.Start.Vect().Z() << ")"
-                      << ", stop pos=(" << sedep.Stop.Vect().X() << "," << sedep.Stop.Vect().Y() << "," << sedep.Stop.Vect().Z() << ")"
+                      << ", start pos=(" << sedep.Start.Vect().X()*0.1 << ","
+                                         << sedep.Start.Vect().Y()*0.1 << ","
+                                         << sedep.Start.Vect().Z()*0.1 << ")"
+                      << ", stop pos=(" << sedep.Stop.Vect().X()*0.1 << ","
+                                        << sedep.Stop.Vect().Y()*0.1 << ","
+                                        << sedep.Stop.Vect().Z()*0.1 << ")"
                       << std::endl;
         sedep_counter++;
 
@@ -499,6 +503,7 @@ namespace larcv
             continue;
           }
           //ctr_a.insert(vox_id);
+          // note: voxels are created sequentially along the path by MakeVoxels()
           double t = sedep.GetStart().T() + voxIdx * dT;
           LARCV_DEBUG() << "    created voxel: " << vox.id()
                         << ", Edep = " << vox.value()

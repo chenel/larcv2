@@ -55,6 +55,14 @@ namespace larcv {
     // correct particle positions by looking at each cluster3d energy deposits
     std::vector<Particle> out_particle_v = correct_particle_positions(meta3d, particle_v, cluster3d_v);
 
+    LARCV_DEBUG() << "Final positions of " << out_particle_v.size() << " particles:" << std::endl;
+    for (const auto & p : out_particle_v)
+    {
+      LARCV_DEBUG() << "  track id=" << p.track_id() << " pdg=" << p.pdg_code() << std::endl
+                    << "     energy start pos=" << p.first_step().dump()
+                    << "     energy stop  pos=" << p.last_step().dump();
+    }
+
     // create output
     auto& out_particle  = mgr.get_data< EventParticle > ( _output_producer  );
     out_particle.emplace  ( std::move(out_particle_v) );
@@ -129,7 +137,8 @@ namespace larcv {
             {
               LARCV_DEBUG() << "     --> now within 1 voxel of true starting point.  not correcting start further" << std::endl;
               correctStart = false;
-            }          }
+            }
+          }
         }
         //double distance_end = point3d.distance(particle.end_position().as_point3d());
         if(correctEnd) {
@@ -146,7 +155,8 @@ namespace larcv {
             {
               LARCV_DEBUG() << "     --> now within 1 voxel of true end point.  not correcting end further" << std::endl;
               correctEnd = false;
-            }          }
+            }
+          }
         }
         if(!correctStart && !correctEnd) break;
       }

@@ -21,12 +21,16 @@ namespace supera
     if(pt.t < first_pt.t)
     {
       first_pt = pt;
-      LARCV_SDEBUG() << " Start point now (" << this->first_pt.x << "," << this->first_pt.y << "," << this->first_pt.z << ")" << std::endl;
+      LARCV_SDEBUG() << " Start point of track " << part.track_id()
+                     << " now (" << this->first_pt.x << "," << this->first_pt.y << "," << this->first_pt.z << ")"
+                     << std::endl;
     }
     if(pt.t > last_pt.t)
     {
       last_pt = pt;
-      LARCV_SDEBUG() << " End point now (" << this->last_pt.x << "," << this->last_pt.y << "," << this->last_pt.z << ")" << std::endl;
+      LARCV_SDEBUG() << " End point of track " << part.track_id()
+                     << " now (" << this->last_pt.x << "," << this->last_pt.y << "," << this->last_pt.z << ")"
+                     << std::endl;
     }
   }
 

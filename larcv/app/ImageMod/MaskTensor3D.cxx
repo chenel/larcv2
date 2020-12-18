@@ -99,10 +99,20 @@ namespace larcv {
       auto const& value_min = _value_min_v[producer_index];
       for(auto const& vox : ev_target.as_vector()) {
         auto const& ref_vox = ev_ref.find(vox.id());
+        LARCV_DEBUG() << "   Voxel id = " << vox.id() << ": "
+                      << (ref_vox.id() == kINVALID_VOXELID ? "not in reference" :  std::to_string(ref_vox.value()))
+                      << std::endl;
         if (ref_vox.id() == kINVALID_VOXELID) continue;
         if (ref_vox.value() < value_min) continue;
         vs.emplace(vox.id(), vox.value(), false);
       }
+
+      LARCV_INFO() << "Target producer had " << ev_target.size() << " voxels;"
+                   << " masked one has " << vs.size()
+                   << " (reference has " << ev_ref.size() << ")"
+                   << std::endl;
+      if (vs.size() != ev_ref.size())
+        LARCV_WARNING() << "Masked voxel set is of different size (" << vs.size() << ") than reference (" << ev_ref.size() << ")!" << std::endl;
 
       ev_output.emplace(std::move(vs), ev_target.meta());
     }
