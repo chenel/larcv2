@@ -458,7 +458,6 @@ namespace larcv
     std::size_t sedep_counter = 0;
     std::size_t bad_sedep_counter = 0;
     std::set<size_t> missing_trackid;
-    std::vector<larcv::Particle> noparticles;  // used in call to MakeVoxelsBelow.  Don't need to update their energy deposits...
     for (const auto & sensitiveDetPair : ev->SegmentDetectors)
     {
       for (const auto & sedep : sensitiveDetPair.second)
@@ -488,7 +487,7 @@ namespace larcv
           continue;
         }
 
-        const std::vector<Voxel> voxels = MakeVoxels(sedep, meta, noparticles);
+        const std::vector<Voxel> voxels = MakeVoxels(sedep, meta);
         double dT = sedep.GetStop().T() - sedep.GetStart().T();
         if (voxels.size() > 1)
           dT /= voxels.size();

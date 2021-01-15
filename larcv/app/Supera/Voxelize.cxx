@@ -11,6 +11,14 @@ namespace larcv
 {
   // --------------------------------------------------
   std::vector<larcv::Voxel> MakeVoxels(const ::TG4HitSegment &hitSegment,
+                                       const larcv::Voxel3DMeta &meta)
+  {
+    std::vector<larcv::Particle> noparticles;
+    return MakeVoxels(hitSegment, meta, noparticles);
+  }
+
+    // --------------------------------------------------
+  std::vector<larcv::Voxel> MakeVoxels(const ::TG4HitSegment &hitSegment,
                                        const larcv::Voxel3DMeta &meta,
                                        std::vector<larcv::Particle> &particles)
   {
