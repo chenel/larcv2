@@ -146,6 +146,7 @@ namespace larcv
                               << ", length = " << length
                               << ", TG4HitSegment edep = " << hitSegment.GetEnergyDeposit()
                           << std::endl;
+        throw larbys("Voxelize.cxx:MakeVoxels(): Negative energy deposit in voxel");
       }
       else if (energyInVoxel > 0)
         voxels.emplace_back(vox_id, energyInVoxel);
