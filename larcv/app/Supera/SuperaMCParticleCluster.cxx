@@ -578,11 +578,11 @@ namespace larcv
       grp.part.energy_deposit((grp.vs.size() ? grp.vs.sum() : 0.));
 
 
-      if (grp.part.creation_process() != "primary" && grp.shape() == kShapeLEScatter)
-      {
-        LARCV_DEBUG() << "   --> LEScatter shape, skipping" << std::endl;
-        continue;
-      }
+      //if (grp.part.creation_process() != "primary" && grp.shape() == kShapeLEScatter)
+      //{
+      //  LARCV_DEBUG() << "   --> LEScatter shape, skipping" << std::endl;
+      //  continue;
+      //}
 
       grp.part.id(output_counter);
       LARCV_DEBUG() << "   --> Assigned output particle id = " << grp.part.id() << std::endl;
@@ -956,7 +956,7 @@ namespace larcv
       }
 
       //if(pdg_code != -11 && pdg_code != 11 && pdg_code != 22) continue;
-      if (pdg_code > 1000000) continue;
+//      if (pdg_code > 1000000) continue;
 
       supera::ParticleGroup grp;
       grp.part = mcpart;
