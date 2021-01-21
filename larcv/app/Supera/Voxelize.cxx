@@ -65,6 +65,7 @@ namespace larcv
     LARCV_SDEBUG() << "Voxelizing TG4HitSegment for GEANT track " << trackId
                  << " from (" << start.x() << "," << start.y() << "," << start.z() << ")"
                  << " to (" << end.x() << "," << end.y() << "," << end.z() << ")"
+                 << ", length = " << (end - start).Mag() << " cm"
                  << std::endl;
 
     larcv::Vec3d pt0, pt1;
@@ -121,8 +122,12 @@ namespace larcv
         dx = std::min(t1,length);
       }else {
         LARCV_SDEBUG() << "      Two crossing" << pt0 + dir * t0 << " => " << pt0 + dir * t1 << std::endl;
-        if(t1>length) dx = length - t0;
-        else dx = t1 - t0;
+        if (t0 > length)
+          dx = length;
+        else if (t1 > length)
+          dx = length - t0;
+        else
+          dx = t1 - t0;
       }
       /*
       res_pt[0] = (nx+0.5) * meta.size_voxel_x();
@@ -132,6 +137,16 @@ namespace larcv
       res.push_back(res_pt);
       */
       double energyInVoxel = dx / length * hitSegment.GetEnergyDeposit();
+      if (energyInVoxel <= 0)
+      {
+        LARCV_SCRITICAL() << "Voxel with non-positive energy deposited!" << std::endl
+                          << "  ID = " << vox_id << std::endl
+                          << "  edep computed from:" << std::endl
+                          << "      dx = " << dx
+                              << ", length = " << length
+                              << ", TG4HitSegment edep = " << hitSegment.GetEnergyDeposit()
+                          << std::endl;
+      }
       voxels.emplace_back(vox_id, energyInVoxel);
       dist_travel += dx;
       dist_section += dx;
@@ -145,6 +160,7 @@ namespace larcv
 
       LARCV_SDEBUG() << "      Updated t1 = " << t1 << " (fractional length " << t1/length << ")" << std::endl;
     }
+    LARCV_SDEBUG() << "Made " << voxels.size() << " voxels with total Edep = " << energy_deposit << std::endl;
 
     if (particle)
     {
