@@ -209,35 +209,67 @@ namespace larcv
     // Merge fragments of showers
     LARCV_INFO() << "Merging: shower ionization" << std::endl;
     this->MergeShowerIonizations(part_grp_v);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Merge touching LEScatter showers
     LARCV_INFO() << "Merging: touching LEScatters" << std::endl;
     this->MergeShowerTouchingLEScatter(meta3d,part_grp_v, particles);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Apply energy threshold
-    LARCV_INFO() << "Applying energy threshold" << std::endl;
+    LARCV_INFO() << "Applying energy threshold (" << _edep_threshold << ")" << std::endl;
     this->ApplyEnergyThreshold(part_grp_v);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Merge fragments of showers
     LARCV_INFO() << "Merging: shower conversions" << std::endl;
     this->MergeShowerConversion(part_grp_v);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Merge touching shower fragments
     // Direct parentage between kShapeShower => kShapeShower/kShapeDelta/kShapeMichel
     LARCV_INFO() << "Merging: shower family touching" << std::endl;
     this->MergeShowerFamilyTouching(meta3d,part_grp_v);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Merge touching shower fragments (in a family)
     LARCV_INFO() << "Merging: shower touching" << std::endl;
     this->MergeShowerTouching(meta3d,part_grp_v, particles);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // merge too small deltas into tracks
     LARCV_INFO() << "Merging: delta rays" << std::endl;
     this->MergeShowerDeltas(part_grp_v);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // Merge touching LEScatter showers
     LARCV_INFO() << "Merging: touching LEScatters" << std::endl;
     this->MergeShowerTouchingLEScatter(meta3d,part_grp_v, particles);
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+    total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep: " << total_vs_edep << std::endl;
 
     // output containers
     std::vector<int> trackid2output(trackid2index.size(), -1);
@@ -460,12 +492,17 @@ namespace larcv
     std::set<size_t> missing_trackid;
     for (const auto & sensitiveDetPair : ev->SegmentDetectors)
     {
+      LARCV_DEBUG() << " Considering " << sensitiveDetPair.second.size()
+                    << " segments in sensitive detector " << sensitiveDetPair.first << ":"
+                    << std::endl;
+      std::size_t sensDetNumVox = 0;
+      double sensDetEdep = 0;
       for (const auto & sedep : sensitiveDetPair.second)
       {
         std::stringstream trks;
         std::for_each(std::begin(sedep.Contrib), std::end(sedep.Contrib),
                       [&trks](const int trk) { trks << " " << trk; });
-        LARCV_DEBUG() << "Recording edep from GEANT trackids" << trks.str()
+        LARCV_DEBUG() << "   Recording edep from GEANT trackids" << trks.str()
                       << ": total Edep=" << sedep.EnergyDeposit
                       << ", start pos=(" << sedep.Start.Vect().X()*0.1 << ","
                                          << sedep.Start.Vect().Y()*0.1 << ","
@@ -487,6 +524,9 @@ namespace larcv
           continue;
         }
 
+        // these times aren't *right*,
+        // but they currently are just used for ordering,
+        // so approximate is ok
         const std::vector<Voxel> voxels = MakeVoxels(sedep, meta);
         double dT = sedep.GetStop().T() - sedep.GetStart().T();
         if (voxels.size() > 1)
@@ -496,7 +536,7 @@ namespace larcv
           const Voxel & vox = voxels[voxIdx];
           if (vox.id() == larcv::kINVALID_VOXELID)
           {
-            LARCV_DEBUG() << "Skipping edep in invalid voxel: " << vox.id()
+            LARCV_DEBUG() << "  Skipping edep in invalid voxel: " << vox.id()
                           << ", Edep =" << vox.value()
                           << std::endl;
             continue;
@@ -516,14 +556,19 @@ namespace larcv
           pt.t = t;
           pt.e = vox.value();
 
+          sensDetEdep += vox.value();
 
           auto &grp = part_grp_v[track_id];
-          if (!grp.valid) continue;
+          if (!grp.valid)
+            LARCV_ERROR() << "group corresponding to GEANT track id = " << track_id << " is invalid even though it was just created?!" << std::endl;
 
           grp.vs.emplace(vox.id(), vox.value(), true);
           grp.AddEDep(pt);  // updates the group's true "begin" and "end" using pt's position.
          } // for (vox)
+         sensDetNumVox += voxels.size();
       } // for (sedep)
+      LARCV_DEBUG() << "In sensitive detector '" << sensitiveDetPair.first << "' there were " << sensDetNumVox
+                    << " voxels summing to total edep of " << sensDetEdep << std::endl;
     } // for (sensitiveDetPair)
     if (bad_sedep_counter)
     {
@@ -533,9 +578,16 @@ namespace larcv
     }
 
     LARCV_DEBUG() << "Particle groups now associated to the following true energy voxels:" << std::endl;
+    std::size_t nVox = 0;
+    double edep = 0;
     for (std::size_t idx = 0; idx < part_grp_v.size(); idx++)
+    {
+      nVox += part_grp_v[idx].vs.size();
+      edep += part_grp_v[idx].vs.sum();
       LARCV_DEBUG() << "    track id=" << idx << ", pdg=" << part_grp_v[idx].part.pdg_code() << ": "
                     << part_grp_v[idx].vs.size() << " voxels, Edep sum=" << part_grp_v[idx].vs.sum() << std::endl;
+    }
+    LARCV_DEBUG() << "Total: " << nVox << " voxels, Edep = " << edep << std::endl;
   } // SuperaMCParticleCluster::AnalyzeSimEnergyDeposit()
 
   // ------------------------------------------------------
@@ -660,7 +712,11 @@ namespace larcv
       vs.reserve(grp.vs.size());
       for (auto const &vox : grp.vs.as_vector())
       {
-        if (vox.value() < _edep_threshold) continue;
+        if (vox.value() < _edep_threshold)
+        {
+          LARCV_DEBUG() << "  Dropping below-threshold voxel " << vox.id() << " with edep = " << vox.value() << std::endl;
+          continue;
+        }
         vs.emplace(vox.id(), vox.value(), true);
       }
       grp.vs = vs;
@@ -931,12 +987,14 @@ namespace larcv
 
   // ------------------------------------------------------
   std::vector<supera::ParticleGroup>
-  SuperaMCParticleCluster::CreateParticleGroups(const std::vector<larcv::Particle>& particles)
+  SuperaMCParticleCluster:: CreateParticleGroups(const std::vector<larcv::Particle>& particles)
   {
     const larcv::Particle invalid_part;
 
     auto const &parent_pdg_v = _mc_part_list.ParentPdgCode();
     auto const &trackid2index = _mc_part_list.TrackIdToIndex();
+
+    // note: this default-constructs all of them, which sets them to 'invalid' unless overwritten
     std::vector<supera::ParticleGroup> result(trackid2index.size());
     for (size_t index = 0; index < particles.size(); ++index)
     {
