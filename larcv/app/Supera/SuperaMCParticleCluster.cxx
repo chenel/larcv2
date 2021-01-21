@@ -199,6 +199,13 @@ namespace larcv
     LARCV_INFO() << "Analyzing energy deposits" << std::endl;
     this->AnalyzeSimEnergyDeposit(meta3d, part_grp_v);
 
+    // total count of voxels will be used for cross-checks
+    size_t total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels (original): " << total_vs_size << std::endl;
+    float total_vs_edep = SumVoxelsEdep(part_grp_v);
+    LARCV_DEBUG() << "Total edep (original): " << total_vs_edep << std::endl;
+
+
     // Merge fragments of showers
     LARCV_INFO() << "Merging: shower ionization" << std::endl;
     this->MergeShowerIonizations(part_grp_v);
@@ -239,16 +246,9 @@ namespace larcv
     // Assign output IDs and relationships
     this->AssignParticleGroupIDs(trackid2index, output2trackid, part_grp_v, trackid2output);
 
-    // At this point, count total number of voxels (will be used for x-check later)
-    size_t total_vs_size = std::accumulate(std::begin(part_grp_v),
-                                           std::end(part_grp_v),
-                                           std::size_t(0),
-                                           [](std::size_t s, const supera::ParticleGroup & grp)
-                                           {
-                                             if (grp.valid && grp.size_all() >= 1)
-                                               s += grp.vs.size();
-                                             return s;
-                                           });
+    total_vs_size = CountVoxels(part_grp_v);
+    LARCV_DEBUG() << "Total number of voxels: " << total_vs_size << std::endl;
+
 
     // For shower orphans, we need to register the most base shower particle in the output (for group)
     LARCV_INFO() << "Searching the root (group) for kShapeShower particles w/ invalid group id... ("

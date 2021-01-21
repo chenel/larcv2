@@ -89,6 +89,24 @@ namespace supera
     larcv::ShapeType_t shape() const;
 
   };
+
+  // --------------------------------------------------------
+
+  /// Sum up the total number of voxels in a collection of ParticleGroups.
+  ///
+  /// \param pgs           Vector of ParticleGroups to be considered
+  /// \param inclInvalid   Include ParticleGroups for which !group.valid? (i.e. those that have been merged into another)
+  /// \return              the count
+  std::size_t CountVoxels(const std::vector<ParticleGroup>& pgs, bool inclInvalid=false);
+
+  /// Sum up the total deposited energy of voxels in a collection of ParticleGroups.
+  ///
+  /// \param pgs           Vector of ParticleGroups to be considered
+  /// \param inclInvalid   Include ParticleGroups for which !group.valid? (i.e. those that have been merged into another)
+  /// \return              the summed energy
+  float SumVoxelsEdep(const std::vector<ParticleGroup>& pgs, bool inclInvalid= false);
+
+
 }
 
 #endif //LARCV2_SUPERAMCPARTICLECLUSTERDATA_H

@@ -1,5 +1,7 @@
 #include "SuperaMCParticleClusterData.h"
 
+#include <numeric>
+
 #include "larcv/core/Base/larcv_logger.h"
 
 namespace supera
@@ -98,4 +100,33 @@ this->AddEDep(pt);
     return res;
   }
 
+  // -------------------------------------
+
+  std::size_t CountVoxels(const std::vector<ParticleGroup> &pgs, bool inclInvalid)
+  {
+    return std::accumulate(std::begin(pgs),
+                           std::end(pgs),
+                           std::size_t(0),
+                           [inclInvalid](std::size_t s, const supera::ParticleGroup & grp)
+                           {
+                             if (!inclInvalid || grp.valid)
+                               s += grp.vs.size();
+                             return s;
+                           });
+  }
+
+  // -------------------------------------
+
+  float SumVoxelsEdep(const std::vector<ParticleGroup> &pgs, bool inclInvalid)
+  {
+    return std::accumulate(std::begin(pgs),
+                           std::end(pgs),
+                           0.0f,
+                           [inclInvalid](double s, const supera::ParticleGroup & grp)
+                           {
+                             if (!inclInvalid || grp.valid)
+                               s += grp.vs.sum();
+                             return s;
+                           });
+  }
 }
