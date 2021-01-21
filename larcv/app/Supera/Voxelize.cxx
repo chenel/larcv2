@@ -137,9 +137,9 @@ namespace larcv
       res.push_back(res_pt);
       */
       double energyInVoxel = dx / length * hitSegment.GetEnergyDeposit();
-      if (energyInVoxel <= 0)
+      if (energyInVoxel < 0)
       {
-        LARCV_SCRITICAL() << "Voxel with non-positive energy deposited!" << std::endl
+        LARCV_SCRITICAL() << "Voxel with negative energy deposited!" << std::endl
                           << "  ID = " << vox_id << std::endl
                           << "  edep computed from:" << std::endl
                           << "      dx = " << dx
@@ -147,7 +147,8 @@ namespace larcv
                               << ", TG4HitSegment edep = " << hitSegment.GetEnergyDeposit()
                           << std::endl;
       }
-      voxels.emplace_back(vox_id, energyInVoxel);
+      else if (energyInVoxel > 0)
+        voxels.emplace_back(vox_id, energyInVoxel);
       dist_travel += dx;
       dist_section += dx;
       energy_deposit += energyInVoxel;
