@@ -92,7 +92,13 @@ namespace larcv {
         if (vox.value() < min_voxel_value) continue;
         ctr++;
       }
-      if (ctr < min_voxel_count) return false;
+      LARCV_DEBUG() << "Event " << event_tensor3d.event() << " has " << ctr << " voxels at label: " << producer << std::endl;
+      if (ctr < min_voxel_count)
+      {
+        LARCV_INFO() << "Event " << event_tensor3d.event() << " has fewer than " << min_voxel_count << " voxels.  Skipping." << std::endl;
+        return false;
+      }
+
     }
 
     for (size_t producer_index = 0; producer_index < _tensor2d_producer_v.size(); ++producer_index) {
