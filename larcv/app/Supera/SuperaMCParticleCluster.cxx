@@ -875,6 +875,9 @@ namespace larcv
     {
       int trackid = output2trackid[index];
       auto &grp = part_grp_v[trackid];
+
+      LARCV_DEBUG() << "Creating output cluster for group " << grp.part.id() << " (" << grp.vs.size() << " voxels)" << std::endl;
+
       // set semantic type
       ShapeType_t semantic = grp.shape();
       if (semantic == kShapeUnknown)
