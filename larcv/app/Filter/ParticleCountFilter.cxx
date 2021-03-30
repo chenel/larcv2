@@ -15,8 +15,11 @@ namespace larcv {
   void ParticleCountFilter::configure(const PSet& cfg)
   {
     _part_producer = cfg.get<std::string>("ParticleProducer");
-    _max_part_count = cfg.get<size_t>("MaxCount");
+    _max_part_count = cfg.get<size_t>("MaxCount", std::numeric_limits<size_t>::max());
     _min_part_count = cfg.get<size_t>("MinCount",0);
+    auto shapes = cfg.get<std::vector<int>>("ParticleShapes");
+    for (const auto & shape : shapes)
+      _part_shapes.insert(static_cast<larcv::ShapeType_t>(shape));
   }
 
   void ParticleCountFilter::initialize()
@@ -28,7 +31,18 @@ namespace larcv {
     if(part_v.size() >= _part_count_v.size()) {
       _part_count_v.resize(part_v.size()+1,0);
     }
-    _part_count_v[part_v.size()] += 1;
+    std::size_t size = 0;
+    if (!_part_shapes.empty())
+    {
+      for (const auto & part : part_v)
+      {
+        if (_part_shapes.find(part.shape()) != _part_shapes.end())
+          size++;
+      }
+    }
+    else
+      size = part_v.size();
+    _part_count_v[size] += 1;
     
     return (_min_part_count <= part_v.size() && part_v.size() <= _max_part_count);
   }

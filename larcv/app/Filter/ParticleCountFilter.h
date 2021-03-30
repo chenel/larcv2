@@ -47,6 +47,7 @@ namespace larcv {
     size_t _max_part_count;
     size_t _min_part_count;
     std::vector<size_t> _part_count_v;
+    std::unordered_set<larcv::ShapeType_t> _part_shapes;
   };
 
   /**
