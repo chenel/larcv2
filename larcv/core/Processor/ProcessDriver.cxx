@@ -289,9 +289,14 @@ namespace larcv {
     // No event-write to be done if _has_event_creator is set. Otherwise go ahead
     if(!_has_event_creator) {
       // If not read mode save entry
-      if(_io.io_mode() != IOManager::kREAD && (!_enable_filter || good_status)) {
-	//cleared = true;
-	_io.save_entry();    
+      if(_io.io_mode() != IOManager::kREAD) {
+        if (_enable_filter && !good_status)
+          _io.clear_entry();
+        else
+        {
+          //cleared = true;
+          _io.save_entry();
+        }
       }
       /*
       if(!cleared)
