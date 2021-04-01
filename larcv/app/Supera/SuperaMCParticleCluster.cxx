@@ -943,10 +943,11 @@ namespace larcv
                                                           size_t output_vs_size) const
   {
     VoxelSet leftover_vs;
-    leftover_vs.reserve(total_vs_size - output_vs_size);
 
     if (total_vs_size > output_vs_size)
     {
+      leftover_vs.reserve(total_vs_size - output_vs_size);
+
       int ctr = 0;
       for (auto &grp : part_grp_v)
       {
