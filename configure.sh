@@ -69,6 +69,11 @@ else
     fi
 fi
 
+# check for CLHEP.
+if [ `command -v clhep-config` ]; then
+	LARCV_INCLUDES="$LARCV_INCLUDES `clhep-config --include`"
+	LARCV_LIBS="$LARCV_LIBS `clhep-config --libs`"
+fi
 
 # Check OpenCV
 export LARCV_OPENCV=1
