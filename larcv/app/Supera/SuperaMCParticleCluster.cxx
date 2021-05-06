@@ -1480,18 +1480,49 @@ namespace larcv
   void SuperaMCParticleCluster::FixUnassignedLEScatterGroups(std::vector<supera::ParticleGroup> &part_grp_v,
                                                              const std::vector<int> &output2trackid) const
   {
-    for (size_t output_index = 0; output_index < output2trackid.size(); ++output_index)
+    LARCV_INFO() << "Inspecting LEScatter groups for invalid group ids..." << std::endl;
+    for (auto & grp : part_grp_v)
+//    for (size_t output_index = 0; output_index < output2trackid.size(); ++output_index)
     {
-      auto &grp = part_grp_v[output2trackid[output_index]];
-      if (grp.part.group_id() != kINVALID_INSTANCEID)
+//      auto &grp = part_grp_v[output2trackid[output_index]];
+      if (grp.shape() != kShapeLEScatter)
         continue;
-      if (grp.shape() == kShapeLEScatter)
+
+      LARCV_DEBUG() << "   trackid="  << grp.part.track_id() << " group=" << grp.part.group_id() << std::endl;
+      if (grp.part.group_id() != kINVALID_INSTANCEID)
       {
-        // assign parent's group, otherwise leave as is = kINVALID_INSTANCEID
-        auto parent_partid = grp.part.parent_id();
-        if (parent_partid == kINVALID_INSTANCEID)
-          continue;
-        grp.part.group_id(part_grp_v[output2trackid[parent_partid]].part.group_id());
+        LARCV_DEBUG() << "     --> group is valid; don't update." << std::endl;
+        continue;
+      }
+
+      // assign parent's group, otherwise leave as is = kINVALID_INSTANCEID
+      auto parent_partid = grp.part.parent_id();
+      if (parent_partid == kINVALID_INSTANCEID)
+      {
+        LARCV_DEBUG() << "     --> invalid, but parent also has invalid parent id??  Can't fix..." << std::endl;
+        continue;
+      }
+
+      // todo: I think there's a more efficient way to find this using
+      //       one of the intermediate vectors, but I can't work it out at the moment
+      auto parent_part = *std::find_if(part_grp_v.begin(), part_grp_v.end(),
+                                 [&](const supera::ParticleGroup & searchGrp)
+                                      {
+                                        return searchGrp.part.track_id() == grp.part.parent_track_id();
+                                      });
+      if (parent_part.part.group_id() != larcv::kINVALID_INSTANCEID)
+      {
+        LARCV_DEBUG() << "     --> rewrote group id to parent (trackid=" << parent_part.part.track_id()
+                      << ")'s group id = " << parent_part.part.group_id()
+                      << std::endl;
+        grp.part.group_id(parent_part.part.group_id());
+      }
+      else
+      {
+        LARCV_DEBUG() << "     --> no valid parent.  Rewrote group id to its own particle ID ("
+                      << grp.part.id() << ")"
+                      << std::endl;
+        grp.part.group_id(grp.part.id());
       }
     }
   }
