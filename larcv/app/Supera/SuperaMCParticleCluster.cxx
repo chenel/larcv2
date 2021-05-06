@@ -608,7 +608,7 @@ namespace larcv
       size_t output_counter = output2trackid.size();
       if (!grp.valid)
       {
-        LARCV_DEBUG() << "   --> invalid group, skipping" << std::endl;
+        LARCV_DEBUG() << "   --> invalid group (i.e. already merged), skipping" << std::endl;
         continue;
       }
       if (grp.part.creation_process() != "primary" && grp.size_all() < 1)
@@ -637,7 +637,7 @@ namespace larcv
       //}
 
       grp.part.id(output_counter);
-      LARCV_DEBUG() << "   --> Assigned output particle id = " << grp.part.id() << std::endl;
+      LARCV_DEBUG() << "   --> Assigned output group id = " << grp.part.id() << std::endl;
       trackid2output[grp.part.track_id()] = output_counter;
       for (auto const &child : grp.trackid_v)
         trackid2output[child] = output_counter;
@@ -682,7 +682,8 @@ namespace larcv
       } // if (parent_trackid != larcv::kINVALID_UINT)
       else
       {
-        LARCV_DEBUG() << "     --> no valid ancestor.  Assigning this particle's parent ID to itself." << std::endl;
+        LARCV_DEBUG() << "     --> no valid ancestor.  Assigning this particle's parent IDs to itself.  "
+                      << " (group id=" << grp.part.group_id() << ")" << std::endl;
         // otherwise checks in CheckParticleValidity() will fail (parent ID will point to something not in output)
         grp.part.parent_id(grp.part.id());
       }
@@ -2030,6 +2031,10 @@ namespace larcv
           if (!parent.valid || parent.vs.size() < 1) continue;
           if (this->IsTouching(meta, grp.vs, parent.vs))
           {
+            LARCV_DEBUG() << "Merging LEScatter track id = " << grp.part.track_id()
+                          << " into touching parent shower group (id=" << parent.part.group_id() << ")"
+                          << " with track id = " << parent.part.track_id()
+                          << std::endl;
             parent.Merge(grp);
             merge_ctr++;
             break;
