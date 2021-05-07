@@ -24,15 +24,16 @@ fi
 
 # Check python version compatibility:
 export LARCV_PYTHON_CONFIG=python-config
-LARCV_PYVERSION=0
-export LARCV_PYTHON=`which python`
-if [ `command -v python` ]; then
-    LARCV_PYVERSION=$($LARCV_PYTHON -c "import sys; print(sys.version_info.major)")
-else
-    export LARCV_PYTHON=`which python3`
-    LARCV_PYVERSION=$($LARCV_PYTHON -c "import sys; print(sys.version_info.major)")
-fi
-if [[ $LARCV_PYVERSION -gt 2 ]]
+LARCV_PYVERSION=3
+export LARCV_PYTHON=`which python3.8`
+#export LARCV_PYTHON=`which python`
+#if [ `command -v python` ]; then
+#    LARCV_PYVERSION=$($LARCV_PYTHON -c "import sys; print(sys.version_info.major)")
+#else
+#    export LARCV_PYTHON=`which python3`
+#    LARCV_PYVERSION=$($LARCV_PYTHON -c "import sys; print(sys.version_info.major)")
+#fi
+if [[ "$LARCV_PYVERSION" -gt 2 ]]
 then
     minor=$(python3 -c "import sys; print(sys.version_info.minor)")
     export LARCV_PYTHON_CONFIG=python${LARCV_PYVERSION}.${minor}-config
@@ -44,7 +45,9 @@ if [ `command -v edep-sim` ]; then
     LARCV_EDEPSIM_INCLUDES=`geant4-config --prefix`
     export LARCV_EDEPSIM_INCLUDES="-I${LARCV_EDEPSIM_INCLUDES}/include -I${LARCV_EDEPSIM_INCLUDES}/include/Geant4 -I${where}/include"
     LARCV_EDEPSIM_LIBS=`geant4-config --libs`
-    export LARCV_EDEPSIM_LIBS="${LARCV_EDEPSIM_LIBS} -L${where}/lib -ledepsim -ledepsim_io "    
+    export LARCV_EDEPSIM_LIBS="${LARCV_EDEPSIM_LIBS} -L${where}/lib -ledepsim -ledepsim_io "
+else
+    echo -e "\033[93mWarning\033[00m ... missing edep-sim support.  Supera modules may not run."
 fi
 
 export LARCV_COREDIR=$LARCV_BASEDIR/larcv/core
@@ -67,6 +70,20 @@ else
 	echo
 	return 1;
     fi
+fi
+
+# set up some ROOT include paths.
+# we need all the subdirs of the top include path
+# since rootcling produces statements like
+#   #include "Voxel3DMeta.h"
+# might be possible to fix this with appropriate args to rootcling,
+# but in a hurry just now
+export ROOT_INCLUDE_PATH="$ROOT_INCLUDE_PATH:`find $LARCV_INCDIR -type d | tr '\n' ':'`"
+# also our Python
+export ROOT_INCLUDE_PATH="$ROOT_INCLUDE_PATH:`$LARCV_PYTHON_CONFIG --includes | sed 's|-I\([^ ]*\).*|\1|g'`"
+# and edep-sim if relevant
+if [ -n "$LARCV_EDEPSIM_INCLUDES" ]; then
+	export ROOT_INCLUDE_PATH="$ROOT_INCLUDE_PATH:$EDEP_ROOT/$EDEP_TARGET/include"
 fi
 
 # check for CLHEP.
