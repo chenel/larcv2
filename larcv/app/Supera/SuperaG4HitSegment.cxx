@@ -2,6 +2,7 @@
 #define __SUPERAG4HITSEGMENT_CXX__
 
 #include <numeric>
+#include <unordered_map>
 
 #include "Voxelize.h"
 
@@ -50,6 +51,15 @@ namespace larcv {
     auto meta = ev_hittensor->meta();
     larcv::AABBox<double> box(meta);
 
+    // build a map of which primary particles go with which interaction
+    std::unordered_map<std::size_t, std::size_t> primToInt;
+    for (std::size_t intIdx = 0; intIdx < evt->Primaries.size(); intIdx++)
+    {
+      const TG4PrimaryVertex & intxn = evt->Primaries[intIdx];
+      for (const TG4PrimaryParticle & part : intxn.Particles)
+        primToInt[part.GetTrackId()] = intIdx;
+    }
+
     std::vector<larcv::Particle> particles;
     LARCV_INFO() << "There are " << evt->Trajectories.size() << " TG4Trajectories in this event" << std::endl;
     particles.reserve(evt->Trajectories.size());
@@ -57,13 +67,26 @@ namespace larcv {
     for(auto const& traj : evt->Trajectories)
     {
       ++partCounter;
-      const TG4Trajectory * parentTraj = (traj.GetParentId() >= 0 && traj.GetParentId() < static_cast<int>(evt->Trajectories.size()))
-                                         ? &evt->Trajectories[traj.GetParentId()]
-                                         : nullptr;
+      const TG4Trajectory * parentTraj = nullptr;
+
+      // work back up to the top of the hierarchy to find the primary this particle came from
+      // (we need that info to determine which interaction it's part of)
+      const TG4Trajectory * t = &traj;
+      while (t->GetParentId() >= 0 && t->GetParentId() < static_cast<int>(evt->Trajectories.size()))
+      {
+        const TG4Trajectory * p = &evt->Trajectories[t->GetParentId()];
+        if (!parentTraj)
+          parentTraj = p;
+        t = p;
+      }
+      std::size_t intId = primToInt[t->GetTrackId()];
+
+
       larcv::Particle part = this->MakeParticle(traj, parentTraj, box);
       part.id(partCounter);
+      part.interaction_id(intId);
       LARCV_INFO() << "Made particle ID= " << part.id() << " from trajectory:" << std::endl
-                   << "   Track ID=" << part.track_id() << " PDG=" << part.pdg_code()
+                   << "   In interaction=" << intId << " Track ID=" << part.track_id() << " PDG=" << part.pdg_code()
                         << " KE=" << (part.energy_init() - sqrt(part.energy_init()*part.energy_init() - part.p()*part.p()))
                         << " MeV" << std::endl
                    << "     full extent: "
@@ -79,7 +102,7 @@ namespace larcv {
     // particle parent IDs can't be assigned until the whole set of particles are assembled...
     for (std::size_t partIdx = 0; partIdx < particles.size(); partIdx++)
     {
-      if (particles[partIdx].parent_id() != larcv::kINVALID_USHORT)
+      if (particles[partIdx].parent_id() != larcv::kINVALID_INSTANCEID)
         continue;
 
       // these are primaries and won't have parents anyway

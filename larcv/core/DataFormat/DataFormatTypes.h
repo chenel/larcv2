@@ -19,9 +19,9 @@ namespace larcv {
   /// "ID" of MCTruth in terms of its index number in the collection std::vector
   typedef unsigned short MCTIndex_t;
   /// "ID" for a set of elements
-  typedef unsigned short InstanceID_t;
+  typedef unsigned int InstanceID_t;
   /// Invalid rep for InstanceID_t
-  static const unsigned short kINVALID_INSTANCEID = kINVALID_USHORT;
+  static const unsigned int kINVALID_INSTANCEID = kINVALID_UINT;
   /// Invalid projection id
   static const ProjectionID_t kINVALID_PROJECTIONID = kINVALID_USHORT;
 
