@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from __future__ import print_function
+from past.builtins import xrange
 import ROOT, sys
 from ROOT import std, TChain
 from larcv import larcv
@@ -22,8 +25,10 @@ if len(sys.argv) > 2:
 		print('Adding input:',argv)
 		ch.AddFile(argv)
 print("Chain has", ch.GetEntries(), "entries")
+
+# sometimes num_entry overflows instead of being negative.  not sure why?
 event_range = (proc.batch_start_entry(), proc.batch_start_entry() + proc.batch_num_entry()) \
-	if proc.batch_num_entry() > 0 \
+	if proc.batch_num_entry() > 0 and proc.batch_num_entry() < 1e18 \
 	else (0, ch.GetEntries())
 print('Processing', event_range[1] - event_range[0], 'events')
 sys.stdout.flush()
@@ -39,7 +44,7 @@ for name in proc.process_names():
 		supera_procs.append(pid)
 
 # Event loop
-for entry in range(*event_range):
+for entry in xrange(*event_range):
 	print("considering event:", entry)
 	sys.stdout.flush()
 	bytes = ch.GetEntry(entry)
